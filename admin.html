@@ -4,21 +4,20 @@
     <meta charset="UTF-8">
     <title>Panel de Administración</title>
     <style>
-        /* Estilos iniciales para el Login */
+        body { display: none; font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
-        /* Estilos para el contenido administrativo (oculto al inicio) */
-        #admin-content { display: none; padding: 20px; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #333; color: white; padding: 10px; }
+        th { background-color: #333; color: white; padding: 10px; cursor: pointer; } /* cursor: pointer para indicar que se puede tocar */
         td { border: 1px solid #ddd; padding: 10px; }
         .btn-confirm { background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; }
         .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        
+        /* Estilo para el rectángulo verde */
+        .badge-confirmado { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <!-- Capa de Login (Visible al inicio) -->
     <div id="login-layer">
         <h2>Acceso Administrador</h2>
         <input type="text" id="user" placeholder="Usuario"><br><br>
@@ -26,12 +25,15 @@
         <button onclick="validar()">Ingresar</button>
     </div>
 
-    <!-- Contenido Administrativo (Oculto al inicio) -->
     <div id="admin-content">
         <h1>Citas Pendientes</h1>
         <table>
             <thead>
-                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
+                <tr>
+                    <th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th>
+                    <th onclick="ordenarPorFecha()">Fecha ↕</th>
+                    <th>Estado</th><th>Acciones</th>
+                </tr>
             </thead>
             <tbody id="lista-citas"></tbody>
         </table>
@@ -50,28 +52,30 @@
             appId: "1:1070762032731:web:74ad150e739181c8d0897e"
         }));
 
-        // Función de validación
+        let listaCitas = [];
+        let ordenAscendente = true;
+
         window.validar = async () => {
             const u = document.getElementById("user").value;
             const p = document.getElementById("pass").value;
             const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
-            
             if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
                 cargarCitas();
-            } else {
-                alert("Credenciales incorrectas");
-            }
+            } else { alert("Credenciales incorrectas"); }
         };
 
-        // Función para cargar datos
         async function cargarCitas() {
-            const tbody = document.getElementById("lista-citas");
             const snap = await getDocs(collection(db, "citas"));
+            listaCitas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarTabla();
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById("lista-citas");
             tbody.innerHTML = "";
-            snap.forEach(docSnap => {
-                const c = docSnap.data();
+            listaCitas.forEach(c => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${c.nombre || ''}</td>
@@ -79,15 +83,25 @@
                     <td>${c.telefono || ''}</td>
                     <td>${c.doctor || ''} - ${c.hora || ''}</td>
                     <td>${c.fecha || ''}</td>
-                    <td>${c.confirmado ? 'Confirmado' : 'Pendiente'}</td>
+                    <td>${c.confirmado ? '<span class="badge-confirmado">Confirmado</span>' : 'Pendiente'}</td>
                     <td>
-                        ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmar('${docSnap.id}')">Confirmar</button>` : ''}
-                        <button class="btn-cancel" onclick="cancelar('${docSnap.id}')">Cancelar</button>
+                        ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmar('${c.id}')">Confirmar</button>` : ''}
+                        <button class="btn-cancel" onclick="cancelar('${c.id}')">Cancelar</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
+
+        window.ordenarPorFecha = () => {
+            ordenAscendente = !ordenAscendente;
+            listaCitas.sort((a, b) => {
+                const dateA = new Date(a.fecha);
+                const dateB = new Date(b.fecha);
+                return ordenAscendente ? dateA - dateB : dateB - dateA;
+            });
+            renderizarTabla();
+        };
 
         window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { confirmado: true }); cargarCitas(); };
         window.cancelar = async (id) => { if(confirm("¿Seguro?")) { await deleteDoc(doc(db, "citas", id)); cargarCitas(); } };
