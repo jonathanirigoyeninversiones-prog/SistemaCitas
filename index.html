@@ -43,15 +43,11 @@
         let citaSeleccionada = {};
 
         async function inicializar() {
-            // Cargar médicos y citas existentes para bloquear botones
             const medicosSnap = await getDocs(collection(db, "medicos"));
             const citasSnap = await getDocs(collection(db, "citas"));
-            
             medicosSnap.forEach(doc => datosMedicos.push(doc.data()));
             citasSnap.forEach(doc => citasReservadas.push(doc.data()));
-            
-            const especialidades = new Set(datosMedicos.map(m => m.especialidad));
-            renderizarTabs(Array.from(especialidades));
+            renderizarTabs(Array.from(new Set(datosMedicos.map(m => m.especialidad))));
         }
 
         function renderizarTabs(lista) {
@@ -93,12 +89,9 @@
             
             await addDoc(collection(db, "citas"), { ...citaSeleccionada, paciente: nombre, telefono: tel });
             
-            // Enviar a WhatsApp
-            const mensaje = `Hola, quiero confirmar mi cita: %0A- Doctor: ${citaSeleccionada.doctor}%0A- Día: ${citaSeleccionada.dia}%0A- Hora: ${citaSeleccionada.hora}%0A- Paciente: ${nombre}%0A- Teléfono: ${tel}`;
-            window.open(`https://wa.me/584120181456?text=${mensaje}`, '_blank');
+            const mensaje = `Hola, quiero confirmar mi cita:%0A- Doctor: ${citaSeleccionada.doctor}%0A- Día: ${citaSeleccionada.dia}%0A- Hora: ${citaSeleccionada.hora}%0A- Paciente: ${nombre}%0A- Teléfono: ${tel}`;
             
-            alert("¡Cita reservada!");
-            location.reload();
+            window.location.href = `https://wa.me/584120181456?text=${mensaje}`;
         };
 
         inicializar();
