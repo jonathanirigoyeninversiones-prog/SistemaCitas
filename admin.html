@@ -43,22 +43,21 @@
             const user = prompt("Usuario:");
             const pass = prompt("Clave:");
             
-            // BUSCAMOS ESPECÍFICAMENTE EN LA RUTA: configuracion -> credenciales_admin
-            const docRef = doc(db, "configuracion", "credenciales_admin");
-            const docSnap = await getDoc(docRef);
-            
-            if (docSnap.exists()) {
-                const creds = docSnap.data();
-                if (creds.usuario === user && creds.clave === pass) {
+            try {
+                const docRef = doc(db, "configuracion", "credenciales_admin");
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists() && docSnap.data().usuario === user && docSnap.data().clave === pass) {
                     document.body.style.display = "block";
                     cargarCitas();
                     setInterval(cargarCitas, 60000);
-                    return;
+                } else {
+                    alert("Usuario o clave incorrectos.");
+                    window.location.reload(); // Solo recarga para volver a pedir datos
                 }
+            } catch (error) {
+                alert("Error conectando con la base de datos.");
             }
-            
-            alert("Usuario o clave incorrectos");
-            window.location.href = "index.html";
         }
 
         async function cargarCitas() {
