@@ -13,6 +13,7 @@
         .btn-confirm { background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; }
         .btn-cumplido { background-color: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; }
         .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .btn-refresh { background-color: #6c757d; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-left: 10px; }
         .badge-confirmado { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; }
         #buscador { margin-bottom: 15px; padding: 10px; width: 300px; }
     </style>
@@ -29,6 +30,7 @@
     <div id="admin-content">
         <h1>Citas Pendientes</h1>
         <button onclick="mostrarHistorial()">Ver Historial</button>
+        <button class="btn-refresh" onclick="cargarCitas()">Refrescar</button>
         <input type="text" id="buscador" placeholder="Filtrar..." onkeyup="filtrarTabla()">
         <table>
             <thead>
@@ -64,7 +66,6 @@
 
         let listaCitas = [];
 
-        // Función corregida para forzar formato XXX.XXX.XXX
         const formatearCedula = (ced) => {
             let s = ced.toString().replace(/\D/g, '').padStart(9, '0');
             return s.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3');
@@ -78,14 +79,15 @@
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
                 cargarCitas();
+                setInterval(cargarCitas, 60000); 
             } else { alert("Credenciales incorrectas"); }
         };
 
-        async function cargarCitas() {
+        window.cargarCitas = async () => {
             const snap = await getDocs(collection(db, "citas"));
             listaCitas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarTabla(listaCitas);
-        }
+        };
 
         function renderizarTabla(data) {
             const tbody = document.getElementById("lista-citas");
