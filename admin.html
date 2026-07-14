@@ -10,6 +10,7 @@
         <thead>
             <tr>
                 <th>Paciente</th>
+                <th>Cédula/Tel</th>
                 <th>Cita</th>
                 <th>Fecha</th>
             </tr>
@@ -37,7 +38,8 @@
             snap.forEach(doc => {
                 const c = doc.data();
                 tbody.innerHTML += `<tr>
-                    <td>${c.nombre || 'Paciente'}</td>
+                    <td>${c.nombre || 'N/A'}</td>
+                    <td>${c.cedula || 'N/A'}</td>
                     <td>${c.doctor || 'N/A'} - ${c.hora || 'N/A'}</td>
                     <td>${c.fecha || 'Sin fecha'}</td>
                 </tr>`;
