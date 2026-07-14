@@ -8,11 +8,9 @@
     <ul id="lista-medicos"></ul>
 
     <script type="module">
-        // Importa las funciones necesarias desde Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-        // Tu configuración
         const firebaseConfig = {
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
             authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
@@ -23,22 +21,20 @@
             measurementId: "G-7NC0YQ2XEG"
         };
 
-        // Inicializar Firebase y Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Función para leer los médicos
         async function cargarMedicos() {
             const lista = document.getElementById("lista-medicos");
             const querySnapshot = await getDocs(collection(db, "medicos"));
             
             querySnapshot.forEach((doc) => {
                 const medico = doc.data();
-                lista.innerHTML += `<li>${medico.nombre} - ${medico.especialidad}</li>`;
+                // Fíjate aquí: estamos usando los nombres exactos que tienes en Firebase
+                lista.innerHTML += `<li>${medico.Nombre} - ${medico.especialidad}</li>`;
             });
         }
 
-        // Llamar a la función
         cargarMedicos();
     </script>
 </body>
