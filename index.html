@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Reserva de Citas</title>
+    <style>
+        .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; }
+        .slot-btn { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
+    </style>
 </head>
 <body>
     <h1>🏥 Reserva tu Cita</h1>
@@ -22,23 +26,40 @@
             appId: "1:1070762032731:web:74ad150e739181c8d0897e"
         }));
 
+        let medicos = [];
+
         async function init() {
+            const snap = await getDocs(collection(db, "medicos"));
+            medicos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            
             const nav = document.getElementById("nav-especialidades");
-            try {
-                const snap = await getDocs(collection(db, "medicos"));
-                const medicos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const especialidades = [...new Set(medicos.map(m => m.especialidad))];
-                
-                especialidades.forEach(esp => {
-                    const b = document.createElement("button");
-                    b.innerText = esp;
-                    b.onclick = () => alert("Especialidad seleccionada: " + esp);
-                    nav.appendChild(b);
-                });
-            } catch (e) {
-                document.getElementById("seccion-seleccion").innerText = "Error al conectar: " + e.message;
-            }
+            const especialidades = [...new Set(medicos.map(m => m.especialidad))];
+            
+            especialidades.forEach(esp => {
+                const b = document.createElement("button");
+                b.className = "tab";
+                b.innerText = esp;
+                // ESTA ES LA FUNCIÓN QUE MOSTRABA LOS MÉDICOS
+                b.onclick = () => mostrarMedicos(esp);
+                nav.appendChild(b);
+            });
         }
+
+        window.mostrarMedicos = (esp) => {
+            const cont = document.getElementById("seccion-seleccion");
+            cont.innerHTML = "<h3>Selecciona médico:</h3>";
+            medicos.filter(m => m.especialidad === esp).forEach(m => {
+                const b = document.createElement("button");
+                b.className = "slot-btn";
+                b.innerText = "Dr. " + m.Nombre;
+                b.onclick = () => {
+                    // Aquí es donde continúa el flujo de la cita
+                    cont.innerHTML = `<h3>Dr. ${m.Nombre}</h3><input type="date" id="fecha">`;
+                };
+                cont.appendChild(b);
+            });
+        };
+
         window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
