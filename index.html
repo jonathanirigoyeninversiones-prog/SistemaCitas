@@ -65,8 +65,9 @@
             
             cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>
                               <input type="date" id="fecha-selector" value="${fecha}">
-                              <input type="text" id="nombre-paciente" placeholder="Nombre completo">
-                              <input type="text" id="cedula-paciente" placeholder="Cédula o Teléfono">
+                              <input type="text" id="nombre-paciente" placeholder="Nombre y Apellido" required>
+                              <input type="number" id="cedula-paciente" placeholder="Cédula (solo números)" required>
+                              <input type="tel" id="telefono-paciente" placeholder="Teléfono (ej: 04141234567)" pattern="0[0-9]{10}" required>
                               <h4>${diaNombre}</h4>`;
             
             document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(id, e.target.value);
@@ -77,10 +78,14 @@
                 b.onclick = async () => {
                     const nombre = document.getElementById("nombre-paciente").value;
                     const cedula = document.getElementById("cedula-paciente").value;
-                    if(!nombre || !cedula) return alert("Por favor ingresa tu nombre y cédula/teléfono");
+                    const telefono = document.getElementById("telefono-paciente").value;
                     
+                    // Validación simple de campos
+                    if(!nombre || !cedula || !telefono) return alert("Por favor completa todos los datos");
+                    if(!/^0[0-9]{10}$/.test(telefono)) return alert("El teléfono debe tener 11 dígitos y empezar con 0");
+
                     await addDoc(collection(db, "citas"), { 
-                        doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula 
+                        doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono 
                     });
                     alert("Cita reservada con éxito para " + nombre);
                 };
