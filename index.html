@@ -2,16 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>--Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
         .slot-btn { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
         .slot-btn:disabled { background: #ccc; cursor: not-allowed; }
         input { display: block; margin: 10px 0; padding: 8px; width: 250px; }
-        .error-msg { color: #dc3545; font-weight: bold; margin-top: 10px; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 300px; text-align: center; }
+        
+        /* Estilos de Modales */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 30px; border-radius: 15px; width: 80%; max-width: 350px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .btn-modal { padding: 10px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-error { background-color: #dc3545; color: white; }
     </style>
 </head>
 <body>
@@ -19,11 +23,21 @@
     <nav id="nav-especialidades"></nav>
     <div id="seccion-seleccion"></div>
 
+    <!-- Modal Gracias -->
     <div id="modalGracias" class="modal">
         <div class="modal-content">
-            <h2>¡Gracias por Preferirnos!</h2>
-            <p>Nuestro equipo se pondrá en contacto para confirmar la cita.</p>
-            <button onclick="cerrarModal()">Aceptar</button>
+            <h2>¡Cita Reservada!</h2>
+            <p>Nuestro equipo se pondrá en contacto pronto.</p>
+            <button class="btn-modal btn-success" onclick="cerrarModal()">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- Modal Error/No disponible -->
+    <div id="modalNoDisponible" class="modal">
+        <div class="modal-content">
+            <h2 style="color: #dc3545;">Médico no disponible</h2>
+            <p>El profesional seleccionado no labora en esta fecha.</p>
+            <button class="btn-modal btn-error" onclick="cerrarModalNoDisponible()">Aceptar</button>
         </div>
     </div>
 
@@ -73,11 +87,15 @@
 
         window.mostrarHoras = async (id, fecha) => {
             const medico = medicos.find(m => m.id === id);
-            // Ajuste para evitar desfase de zona horaria al calcular el día
             const d = new Date(fecha + 'T00:00:00');
             const diaNombre = dias[d.getDay()];
             const horas = medico[diaNombre];
-            
+
+            if (!horas || horas.length === 0) {
+                document.getElementById("modalNoDisponible").style.display = "block";
+                return;
+            }
+
             const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
             const snap = await getDocs(q);
             const ocupadas = snap.docs.map(d => d.data().hora);
@@ -90,30 +108,29 @@
                               <input type="tel" id="telefono-paciente" placeholder="Teléfono" required>
                               <h4>${diaNombre}</h4>`;
             
-            // Re-vinculamos el evento inmediatamente
             document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(id, e.target.value);
             
-            if (!horas || horas.length === 0) {
-                cont.innerHTML += `<p class="error-msg">El médico no labora los días ${diaNombre}.</p>`;
-            } else {
-                horas.forEach(h => {
-                    const b = document.createElement("button");
-                    b.className = "slot-btn"; b.innerText = h;
-                    if (ocupadas.includes(h)) b.disabled = true;
-                    b.onclick = async () => {
-                        const nombre = document.getElementById("nombre-paciente").value;
-                        const cedula = document.getElementById("cedula-paciente").value;
-                        const telefono = document.getElementById("telefono-paciente").value;
-                        if(!nombre || !cedula || !telefono) return alert("Completa los datos");
-                        await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
-                        document.getElementById("modalGracias").style.display = "block";
-                    };
-                    cont.appendChild(b);
-                });
-            }
+            horas.forEach(h => {
+                const b = document.createElement("button");
+                b.className = "slot-btn"; b.innerText = h;
+                if (ocupadas.includes(h)) b.disabled = true;
+                b.onclick = async () => {
+                    const nombre = document.getElementById("nombre-paciente").value;
+                    const cedula = document.getElementById("cedula-paciente").value;
+                    const telefono = document.getElementById("telefono-paciente").value;
+                    if(!nombre || !cedula || !telefono) return alert("Completa los datos");
+                    await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
+                    document.getElementById("modalGracias").style.display = "block";
+                };
+                cont.appendChild(b);
+            });
         };
 
         window.cerrarModal = () => { location.reload(); };
+        window.cerrarModalNoDisponible = () => { 
+            document.getElementById("modalNoDisponible").style.display = "none";
+            // Recargamos el flujo del médico seleccionado para que el calendario se reinicie
+        };
         window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
