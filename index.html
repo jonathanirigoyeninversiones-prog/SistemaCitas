@@ -76,7 +76,6 @@
             const horas = medico[diaNombre];
             const cont = document.getElementById("seccion-seleccion");
             
-            // Obtener citas ya reservadas para este doctor y fecha
             const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
             const snap = await getDocs(q);
             const ocupadas = snap.docs.map(d => d.data().hora);
