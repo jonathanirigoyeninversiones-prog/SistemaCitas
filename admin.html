@@ -32,12 +32,12 @@
 
         async function cargarCitas() {
             const tbody = document.getElementById("lista-citas");
-            const snap = await getDocs(collection(db, "citas")); // IMPORTANTE: Colección 'citas'
+            const snap = await getDocs(collection(db, "citas"));
             tbody.innerHTML = "";
             snap.forEach(doc => {
                 const c = doc.data();
                 tbody.innerHTML += `<tr>
-                    <td>${c.nombre || 'N/A'}</td>
+                    <td>${c.nombre || 'Paciente'}</td>
                     <td>${c.doctor || 'N/A'} - ${c.hora || 'N/A'}</td>
                     <td>${c.fecha || 'Sin fecha'}</td>
                 </tr>`;
