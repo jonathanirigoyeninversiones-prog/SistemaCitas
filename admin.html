@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>.....Panel de Administración</title>
+    <title>Panel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -31,7 +31,7 @@
         <h1>Citas Pendientes</h1>
         <button onclick="mostrarHistorial()">Ver Historial</button>
         <button class="btn-refresh" onclick="cargarCitas()">Refrescar</button>
-        <input type="text" id="buscador" placeholder="Filtrar por nombre, cédula o teléfono..." onkeyup="filtrarTabla()">
+        <input type="text" id="buscador" placeholder="Filtrar por cédula..." onkeyup="filtrarTabla()">
         <table>
             <thead>
                 <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th onclick="alternarOrden()">Fecha ↕</th><th>Estado</th><th>Acciones</th></tr>
@@ -86,11 +86,9 @@
 
         window.filtrarTabla = () => {
             const busqueda = document.getElementById("buscador").value.toLowerCase();
+            // Filtro exclusivo por cédula
             const filtrados = listaCitas.filter(c => 
-                (c.nombre || '').toLowerCase().includes(busqueda) ||
-                (c.cedula || '').toString().includes(busqueda) ||
-                (c.telefono || '').toLowerCase().includes(busqueda) ||
-                (c.doctor || '').toLowerCase().includes(busqueda)
+                (c.cedula || '').toString().toLowerCase().includes(busqueda)
             );
             renderizarTabla(filtrados);
         };
