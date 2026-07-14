@@ -8,8 +8,9 @@
         table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #333; color: white; }
-        .btn-ws { background: #25D366; color: white; border: none; padding: 8px; text-decoration: none; border-radius: 4px; }
-        .btn-del { background: #dc3545; color: white; border: none; padding: 8px; cursor: pointer; }
+        .btn-confirm { background: #007bff; color: white; border: none; padding: 8px; cursor: pointer; border-radius: 4px; }
+        .btn-del { background: #dc3545; color: white; border: none; padding: 8px; cursor: pointer; margin-left: 5px; }
+        .check { color: green; font-weight: bold; font-size: 1.2em; }
     </style>
 </head>
 <body>
@@ -22,11 +23,11 @@
 
     <div id="panel" style="display:none;">
         <h1>Citas Pendientes</h1>
-        <input type="text" id="filtro" onkeyup="filtrarTabla()" placeholder="Buscar (nombre, cédula, etc)...">
+        <input type="text" id="filtro" onkeyup="filtrarTabla()" placeholder="Buscar...">
         <button onclick="cargarCitas()">Refrescar Lista</button>
         <table>
             <thead>
-                <tr><th>Nombre y Apellido</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Acciones</th></tr>
+                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Estado</th><th>Acciones</th></tr>
             </thead>
             <tbody id="lista-citas"></tbody>
         </table>
@@ -34,7 +35,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -62,17 +63,24 @@
             tbody.innerHTML = "";
             snap.forEach(d => {
                 const c = d.data();
+                const confirmado = c.confirmado === true;
                 tbody.innerHTML += `<tr>
                     <td>${c.nombre} ${c.apellido}</td>
                     <td>${c.cedula}</td>
                     <td>${c.telefono}</td>
                     <td>${c.doctor} - ${c.dia} ${c.hora}</td>
+                    <td class="check">${confirmado ? '✅ Confirmado' : 'Pendiente'}</td>
                     <td>
-                        <a href="https://wa.me/${c.telefono}" target="_blank" class="btn-ws">WhatsApp</a>
+                        ${!confirmado ? `<button class="btn-confirm" onclick="confirmar('${d.id}')">Confirmar</button>` : ''}
                         <button class="btn-del" onclick="eliminar('${d.id}')">Cancelar</button>
                     </td>
                 </tr>`;
             });
+        };
+
+        window.confirmar = async (id) => {
+            await updateDoc(doc(db, "citas", id), { confirmado: true });
+            cargarCitas();
         };
 
         window.filtrarTabla = () => {
