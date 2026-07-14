@@ -8,10 +8,10 @@
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; }
         .slot-btn { padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
         .slot-btn:disabled { background: #adb5bd !important; cursor: not-allowed; }
-        .cancel-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 5px; }
         #modal-confirmacion { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 30px; border-radius: 15px; text-align: center; }
         #form-cita { display: none; margin-top: 20px; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { width: 90%; padding: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -21,10 +21,12 @@
 
     <div id="form-cita">
         <h3>Completar Reserva</h3>
-        <input type="text" id="nombre" placeholder="Nombres"><br><br>
-        <input type="text" id="apellido" placeholder="Apellidos"><br><br>
-        <input type="text" id="cedula" placeholder="Cédula"><br><br>
-        <input type="text" id="telefono" placeholder="Teléfono"><br><br>
+        <input type="text" id="nombre" placeholder="Nombres">
+        <input type="text" id="apellido" placeholder="Apellidos">
+        <!-- Solo permite números en cédula -->
+        <input type="number" id="cedula" placeholder="Cédula (Solo números)">
+        <!-- Input con patrón para teléfono venezolano (ej: 04121234567) -->
+        <input type="tel" id="telefono" placeholder="Teléfono (ej: 04121234567)" pattern="04[1246][0-9]{7}">
         <button id="btn-confirmar" class="slot-btn">Confirmar Reserva</button>
     </div>
 
@@ -38,7 +40,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -87,15 +89,20 @@
         };
 
         document.getElementById("btn-confirmar").onclick = async () => {
-            const data = {
-                nombre: document.getElementById("nombre").value,
-                apellido: document.getElementById("apellido").value,
-                cedula: document.getElementById("cedula").value,
-                telefono: document.getElementById("telefono").value,
-                ...window.citaSeleccionada
-            };
-            if(!data.nombre || !data.cedula) return alert("Completa los datos");
-            await addDoc(collection(db, "citas"), data);
+            const nombre = document.getElementById("nombre").value;
+            const apellido = document.getElementById("apellido").value;
+            const cedula = document.getElementById("cedula").value;
+            const telefono = document.getElementById("telefono").value;
+
+            // Validación básica de teléfono venezolano (11 dígitos, comienza por 04)
+            if (!nombre || !cedula || telefono.length !== 11 || !telefono.startsWith("04")) {
+                alert("Por favor verifica los datos: La cédula debe ser solo números y el teléfono debe tener 11 dígitos (ej: 04121234567)");
+                return;
+            }
+
+            await addDoc(collection(db, "citas"), {
+                nombre, apellido, cedula, telefono, ...window.citaSeleccionada
+            });
             document.getElementById("modal-confirmacion").style.display = "flex";
             document.getElementById("form-cita").style.display = "none";
         };
