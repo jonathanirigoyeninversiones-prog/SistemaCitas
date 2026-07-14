@@ -25,7 +25,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -85,13 +85,26 @@
         };
 
         document.getElementById("btn-confirmar").onclick = async () => {
-            await addDoc(collection(db, "citas"), {
-                ...citaSeleccionada,
-                paciente: document.getElementById("nombre-usuario").value,
-                telefono: document.getElementById("tel-usuario").value
-            });
-            alert("¡Cita reservada!");
-            location.reload();
+            const citasRef = collection(db, "citas");
+            const q = query(citasRef, 
+                where("doctor", "==", citaSeleccionada.doctor),
+                where("dia", "==", citaSeleccionada.dia),
+                where("hora", "==", citaSeleccionada.hora)
+            );
+
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                alert("¡Lo siento! Esta hora ya ha sido reservada.");
+            } else {
+                await addDoc(citasRef, {
+                    ...citaSeleccionada,
+                    paciente: document.getElementById("nombre-usuario").value,
+                    telefono: document.getElementById("tel-usuario").value
+                });
+                alert("¡Cita reservada con éxito!");
+                location.reload();
+            }
         };
 
         cargarDatos();
