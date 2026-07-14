@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>--Reserva de Citas</title>
+    <title>,,Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
@@ -26,14 +26,14 @@
         <div class="modal-content">
             <h2>¡Cita Reservada!</h2>
             <p>Nuestro equipo se pondrá en contacto pronto.</p>
-            <button class="btn-modal btn-success" onclick="cerrarModal()">Aceptar</button>
+            <button class="btn-modal btn-success" onclick="document.getElementById('modalGracias').style.display='none'">Aceptar</button>
         </div>
     </div>
 
     <div id="modalNoDisponible" class="modal">
         <div class="modal-content">
-            <h2 style="color: #dc3545;">Médico no disponible</h2>
-            <p>El profesional seleccionado no labora en esta fecha.</p>
+            <h2 style="color: #dc3545;">Fecha no válida</h2>
+            <p id="msgError">El profesional no labora en esta fecha o la fecha ya pasó.</p>
             <button class="btn-modal btn-error" onclick="document.getElementById('modalNoDisponible').style.display='none'">Aceptar</button>
         </div>
     </div>
@@ -83,12 +83,20 @@
         };
 
         window.mostrarHoras = async (id, fecha) => {
+            const hoy = new Date().toISOString().split('T')[0];
+            if (fecha < hoy) {
+                document.getElementById("msgError").innerText = "No puedes seleccionar fechas pasadas.";
+                document.getElementById("modalNoDisponible").style.display = "block";
+                return;
+            }
+
             const medico = medicos.find(m => m.id === id);
             const d = new Date(fecha + 'T00:00:00');
             const diaNombre = dias[d.getDay()];
             const horas = medico[diaNombre];
 
             if (!horas || horas.length === 0) {
+                document.getElementById("msgError").innerText = "El profesional no labora este día.";
                 document.getElementById("modalNoDisponible").style.display = "block";
                 return;
             }
@@ -116,22 +124,25 @@
                     const cedula = document.getElementById("cedula-paciente").value;
                     const telefono = document.getElementById("telefono-paciente").value;
                     
-                    // Validación Cédula: Solo números, entre 1 y 8 dígitos, no empieza en 0
                     const regexCedula = /^[1-9]\d{0,7}$/;
-                    // Validación Teléfono Venezuela: 11 dígitos, empieza por 04xx
                     const regexTel = /^04[1246]\d{7}$/;
 
                     if(!regexCedula.test(cedula)) return alert("Cédula inválida: Solo números (máximo 8) y no debe comenzar con 0.");
                     if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe ser formato venezolano (ej: 04141234567).");
 
                     await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
+                    
+                    // Limpiar campos tras éxito
+                    document.getElementById("nombre-paciente").value = "";
+                    document.getElementById("cedula-paciente").value = "";
+                    document.getElementById("telefono-paciente").value = "";
+                    
                     document.getElementById("modalGracias").style.display = "block";
                 };
                 cont.appendChild(b);
             });
         };
 
-        window.cerrarModal = () => { location.reload(); };
         window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
