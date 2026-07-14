@@ -20,7 +20,7 @@
     <div id="form-cita">
         <h3>Completar Reserva</h3>
         <input type="text" id="nombre-usuario" placeholder="Nombre completo"><br><br>
-        <input type="text" id="tel-usuario" placeholder="Teléfono"><br><br>
+        <input type="text" id="tel-usuario" placeholder="Tu número de teléfono"><br><br>
         <button id="btn-confirmar">Confirmar Cita</button>
     </div>
 
@@ -38,6 +38,10 @@
         };
 
         const db = getFirestore(initializeApp(firebaseConfig));
+        
+        // Configuramos el número de la clínica AQUÍ (seguro en el código)
+        const NUMERO_CLINICA = "584120181456"; 
+        
         let datosMedicos = [];
         let citasReservadas = [];
         let citaSeleccionada = {};
@@ -87,11 +91,18 @@
             const nombre = document.getElementById("nombre-usuario").value;
             const tel = document.getElementById("tel-usuario").value;
             
-            await addDoc(collection(db, "citas"), { ...citaSeleccionada, paciente: nombre, telefono: tel });
+            // Guardamos con el número de la clínica definido en el código (no el del usuario)
+            await addDoc(collection(db, "citas"), { 
+                ...citaSeleccionada, 
+                paciente: nombre, 
+                telefonoPaciente: tel,
+                telefonoClinica: NUMERO_CLINICA 
+            });
             
-            const mensaje = `Hola, quiero confirmar mi cita:%0A- Doctor: ${citaSeleccionada.doctor}%0A- Día: ${citaSeleccionada.dia}%0A- Hora: ${citaSeleccionada.hora}%0A- Paciente: ${nombre}%0A- Teléfono: ${tel}`;
+            const mensaje = `Hola, confirmo una nueva cita:%0A- Dr: ${citaSeleccionada.doctor}%0A- ${citaSeleccionada.dia} a las ${citaSeleccionada.hora}%0A- Paciente: ${nombre}`;
             
-            window.location.href = `https://wa.me/584120181456?text=${mensaje}`;
+            // window.location.replace reemplaza la página actual, evitando abrir ventanas nuevas
+            window.location.replace(`https://wa.me/${NUMERO_CLINICA}?text=${mensaje}`);
         };
 
         inicializar();
