@@ -6,6 +6,7 @@
     <style>
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; }
         .slot-btn { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
+        input { display: block; margin: 10px 0; padding: 8px; width: 250px; }
     </style>
 </head>
 <body>
@@ -61,15 +62,27 @@
             const diaNombre = dias[new Date(fecha + 'T00:00:00').getDay()];
             const horas = medico[diaNombre];
             const cont = document.getElementById("seccion-seleccion");
-            cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3><input type="date" id="fecha-selector" value="${fecha}"><h4>${diaNombre}</h4>`;
+            
+            cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>
+                              <input type="date" id="fecha-selector" value="${fecha}">
+                              <input type="text" id="nombre-paciente" placeholder="Nombre completo">
+                              <input type="text" id="cedula-paciente" placeholder="Cédula o Teléfono">
+                              <h4>${diaNombre}</h4>`;
+            
             document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(id, e.target.value);
             
             horas?.forEach(h => {
                 const b = document.createElement("button");
                 b.className = "slot-btn"; b.innerText = h;
                 b.onclick = async () => {
-                    await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: "Paciente" });
-                    alert("Cita reservada para el " + fecha);
+                    const nombre = document.getElementById("nombre-paciente").value;
+                    const cedula = document.getElementById("cedula-paciente").value;
+                    if(!nombre || !cedula) return alert("Por favor ingresa tu nombre y cédula/teléfono");
+                    
+                    await addDoc(collection(db, "citas"), { 
+                        doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula 
+                    });
+                    alert("Cita reservada con éxito para " + nombre);
                 };
                 cont.appendChild(b);
             });
