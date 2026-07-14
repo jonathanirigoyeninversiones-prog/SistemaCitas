@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>aqaq Panel de Administración</title>
+    <title>.....Panel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -31,7 +31,7 @@
         <h1>Citas Pendientes</h1>
         <button onclick="mostrarHistorial()">Ver Historial</button>
         <button class="btn-refresh" onclick="cargarCitas()">Refrescar</button>
-        <input type="text" id="buscador" placeholder="Filtrar..." onkeyup="filtrarTabla()">
+        <input type="text" id="buscador" placeholder="Filtrar por nombre, cédula o teléfono..." onkeyup="filtrarTabla()">
         <table>
             <thead>
                 <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th onclick="alternarOrden()">Fecha ↕</th><th>Estado</th><th>Acciones</th></tr>
@@ -84,11 +84,20 @@
             renderizarTabla(listaCitas);
         };
 
+        window.filtrarTabla = () => {
+            const busqueda = document.getElementById("buscador").value.toLowerCase();
+            const filtrados = listaCitas.filter(c => 
+                (c.nombre || '').toLowerCase().includes(busqueda) ||
+                (c.cedula || '').toString().includes(busqueda) ||
+                (c.telefono || '').toLowerCase().includes(busqueda) ||
+                (c.doctor || '').toLowerCase().includes(busqueda)
+            );
+            renderizarTabla(filtrados);
+        };
+
         window.validar = async () => {
             const u = document.getElementById("user").value.trim();
             const p = document.getElementById("pass").value.trim();
-            
-            // LA CORRECCIÓN ESTÁ AQUÍ: apunto a 'credenciales_admin' como aparece en tu consola
             const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
             
             if (docSnap.exists()) {
@@ -99,7 +108,7 @@
                     cargarCitas();
                     setInterval(cargarCitas, 60000); 
                 } else { alert("Credenciales incorrectas"); }
-            } else { alert("Error: No se encuentra el documento de credenciales"); }
+            } else { alert("Error de configuración"); }
         };
 
         window.cargarCitas = async () => {
