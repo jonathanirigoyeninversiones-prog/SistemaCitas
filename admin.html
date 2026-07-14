@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <title>Panel de Administración</title>
     <style>
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #333; color: white; }
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #333; color: white; padding: 10px; text-align: left; }
+        td { border: 1px solid #ddd; padding: 10px; }
+        .btn-wa { background-color: #25d366; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -22,7 +25,7 @@
                 <th>Cédula</th>
                 <th>Teléfono</th>
                 <th>Cita</th>
-                <th>Fecha</th> <!-- Columna añadida -->
+                <th>Fecha</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -31,7 +34,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -46,23 +49,31 @@
             const tbody = document.getElementById("lista-citas");
             const snap = await getDocs(collection(db, "citas"));
             tbody.innerHTML = "";
-            snap.forEach(doc => {
-                const c = doc.data();
-                tbody.innerHTML += `<tr>
+            snap.forEach(docSnap => {
+                const c = docSnap.data();
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
                     <td>${c.nombre || ''}</td>
                     <td>${c.cedula || ''}</td>
                     <td>${c.telefono || ''}</td>
                     <td>${c.doctor || ''} - ${c.hora || ''}</td>
-                    <td>${c.fecha || 'Sin fecha'}</td>
+                    <td>${c.fecha || ''}</td>
                     <td>
-                        <button onclick="window.open('https://wa.me/${c.telefono}')">WhatsApp</button>
-                        <button onclick="alert('Funcionalidad Cancelar')">Cancelar</button>
+                        <button class="btn-wa" onclick="window.open('https://wa.me/${c.telefono}')">WhatsApp</button>
+                        <button class="btn-cancel" onclick="cancelarCita('${docSnap.id}')">Cancelar</button>
                     </td>
-                </tr>`;
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        // Búsqueda
+        window.cancelarCita = async (id) => {
+            if(confirm("¿Estás seguro de cancelar esta cita?")) {
+                await deleteDoc(doc(db, "citas", id));
+                cargarCitas();
+            }
+        };
+
         window.filtrarTabla = () => {
             const filtro = document.getElementById("buscar").value.toUpperCase();
             const filas = document.getElementById("lista-citas").getElementsByTagName("tr");
@@ -71,10 +82,9 @@
             }
         };
 
-        // Cargar al iniciar y refrescar cada 60 segundos
         window.cargarCitas = cargarCitas;
         window.addEventListener("DOMContentLoaded", cargarCitas);
-        setInterval(cargarCitas, 60000); 
+        setInterval(cargarCitas, 60000); // Refresca cada 60 segundos
     </script>
 </body>
 </html>
