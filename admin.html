@@ -6,11 +6,12 @@
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
-        #admin-content { display: none; }
+        #admin-content, #historial-content { display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background-color: #333; color: white; padding: 10px; cursor: pointer; }
         td { border: 1px solid #ddd; padding: 10px; }
         .btn-confirm { background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .btn-cumplido { background-color: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; }
         .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
         .badge-confirmado { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; }
         #buscador { margin-bottom: 15px; padding: 10px; width: 300px; }
@@ -27,22 +28,30 @@
 
     <div id="admin-content">
         <h1>Citas Pendientes</h1>
-        <input type="text" id="buscador" placeholder="Filtrar por nombre, cédula o teléfono..." onkeyup="filtrarTabla()">
+        <button onclick="mostrarHistorial()">Ver Historial</button>
+        <input type="text" id="buscador" placeholder="Filtrar..." onkeyup="filtrarTabla()">
         <table>
             <thead>
-                <tr>
-                    <th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th>
-                    <th onclick="ordenarPorFecha()">Fecha ↕</th>
-                    <th>Estado</th><th>Acciones</th>
-                </tr>
+                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
             </thead>
             <tbody id="lista-citas"></tbody>
         </table>
     </div>
 
+    <div id="historial-content">
+        <h1>Historial de Citas Cumplidas</h1>
+        <button onclick="volverPendientes()">Volver a Pendientes</button>
+        <table>
+            <thead>
+                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Fecha</th></tr>
+            </thead>
+            <tbody id="lista-historial"></tbody>
+        </table>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -54,20 +63,16 @@
         }));
 
         let listaCitas = [];
-        let ordenAscendente = true;
 
         window.validar = async () => {
             const u = document.getElementById("user").value;
             const p = document.getElementById("pass").value;
-            try {
-                const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
-                if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
-                    document.getElementById("login-layer").style.display = "none";
-                    document.getElementById("admin-content").style.display = "block";
-                    cargarCitas();
-                    setInterval(cargarCitas, 60000); 
-                } else { alert("Credenciales incorrectas"); }
-            } catch(e) { alert("Error de conexión"); }
+            const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
+            if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
+                document.getElementById("login-layer").style.display = "none";
+                document.getElementById("admin-content").style.display = "block";
+                cargarCitas();
+            } else { alert("Credenciales incorrectas"); }
         };
 
         async function cargarCitas() {
@@ -80,16 +85,14 @@
             const tbody = document.getElementById("lista-citas");
             tbody.innerHTML = "";
             data.forEach(c => {
-                const fechaPartes = c.fecha ? c.fecha.split('-') : ['', '', ''];
-                const fechaFormateada = fechaPartes.length === 3 ? `${fechaPartes[2]}-${fechaPartes[1]}-${fechaPartes[0]}` : c.fecha;
-                
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${c.nombre || ''}</td><td>${c.cedula || ''}</td><td>${c.telefono || ''}</td>
-                    <td>${c.doctor || ''} - ${c.hora || ''}</td><td>${fechaFormateada || ''}</td>
+                    <td>${c.doctor || ''} - ${c.hora || ''}</td><td>${c.fecha || ''}</td>
                     <td>${c.confirmado ? '<span class="badge-confirmado">Confirmado</span>' : 'Pendiente'}</td>
                     <td>
                         ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmar('${c.id}')">Confirmar</button>` : ''}
+                        <button class="btn-cumplido" onclick="marcarCumplido('${c.id}')">Cumplido</button>
                         <button class="btn-cancel" onclick="cancelar('${c.id}')">Cancelar</button>
                     </td>
                 `;
@@ -97,20 +100,28 @@
             });
         }
 
-        window.filtrarTabla = () => {
-            const filtro = document.getElementById("buscador").value.toLowerCase();
-            const filtrados = listaCitas.filter(c => 
-                (c.nombre?.toLowerCase().includes(filtro)) || 
-                (c.cedula?.toString().includes(filtro)) || 
-                (c.telefono?.toString().includes(filtro))
-            );
-            renderizarTabla(filtrados);
+        window.marcarCumplido = async (id) => {
+            const cita = listaCitas.find(c => c.id === id);
+            await addDoc(collection(db, "historial_citas"), { ...cita, fechaCumplido: new Date().toISOString() });
+            await deleteDoc(doc(db, "citas", id));
+            cargarCitas();
         };
 
-        window.ordenarPorFecha = () => {
-            ordenAscendente = !ordenAscendente;
-            listaCitas.sort((a, b) => ordenAscendente ? new Date(a.fecha) - new Date(b.fecha) : new Date(b.fecha) - new Date(a.fecha));
-            renderizarTabla(listaCitas);
+        window.mostrarHistorial = async () => {
+            document.getElementById("admin-content").style.display = "none";
+            document.getElementById("historial-content").style.display = "block";
+            const snap = await getDocs(collection(db, "historial_citas"));
+            const tbody = document.getElementById("lista-historial");
+            tbody.innerHTML = "";
+            snap.forEach(d => {
+                const c = d.data();
+                tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`;
+            });
+        };
+
+        window.volverPendientes = () => {
+            document.getElementById("admin-content").style.display = "block";
+            document.getElementById("historial-content").style.display = "none";
         };
 
         window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { confirmado: true }); cargarCitas(); };
