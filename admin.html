@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111Panel de Administración</title>
+    <title>Panel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -87,21 +87,19 @@
         window.validar = async () => {
             const u = document.getElementById("user").value.trim();
             const p = document.getElementById("pass").value.trim();
-            const docSnap = await getDoc(doc(db, "configuracion", "datos_clinica"));
+            
+            // LA CORRECCIÓN ESTÁ AQUÍ: apunto a 'credenciales_admin' como aparece en tu consola
+            const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
             
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // Debug: esto aparecerá en la consola del navegador (F12)
-                console.log("Datos BD:", data.usuario, data.clave);
-                console.log("Datos Ingresados:", u, p);
-
                 if (data.usuario.toString().trim() === u && data.clave.toString().trim() === p) {
                     document.getElementById("login-layer").style.display = "none";
                     document.getElementById("admin-content").style.display = "block";
                     cargarCitas();
                     setInterval(cargarCitas, 60000); 
                 } else { alert("Credenciales incorrectas"); }
-            } else { alert("Error: No se encontró el documento de configuración"); }
+            } else { alert("Error: No se encuentra el documento de credenciales"); }
         };
 
         window.cargarCitas = async () => {
