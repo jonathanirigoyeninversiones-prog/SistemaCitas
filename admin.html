@@ -3,16 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel de Administración</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #333; color: white; }
+    </style>
 </head>
 <body>
     <h1>Citas Pendientes</h1>
-    <table border="1">
+    
+    <input type="text" id="buscar" placeholder="Buscar (nombre, cédula, etc)" onkeyup="filtrarTabla()">
+    <button onclick="cargarCitas()">Refrescar Lista</button>
+
+    <table>
         <thead>
             <tr>
-                <th>Paciente</th>
-                <th>Cédula/Tel</th>
+                <th>Nombre y Apellido</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
                 <th>Cita</th>
-                <th>Fecha</th>
+                <th>Fecha</th> <!-- Columna añadida -->
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody id="lista-citas"></tbody>
@@ -38,14 +49,32 @@
             snap.forEach(doc => {
                 const c = doc.data();
                 tbody.innerHTML += `<tr>
-                    <td>${c.nombre || 'N/A'}</td>
-                    <td>${c.cedula || 'N/A'}</td>
-                    <td>${c.doctor || 'N/A'} - ${c.hora || 'N/A'}</td>
+                    <td>${c.nombre || ''}</td>
+                    <td>${c.cedula || ''}</td>
+                    <td>${c.telefono || ''}</td>
+                    <td>${c.doctor || ''} - ${c.hora || ''}</td>
                     <td>${c.fecha || 'Sin fecha'}</td>
+                    <td>
+                        <button onclick="window.open('https://wa.me/${c.telefono}')">WhatsApp</button>
+                        <button onclick="alert('Funcionalidad Cancelar')">Cancelar</button>
+                    </td>
                 </tr>`;
             });
         }
+
+        // Búsqueda
+        window.filtrarTabla = () => {
+            const filtro = document.getElementById("buscar").value.toUpperCase();
+            const filas = document.getElementById("lista-citas").getElementsByTagName("tr");
+            for (let f of filas) {
+                f.style.display = f.innerText.toUpperCase().includes(filtro) ? "" : "none";
+            }
+        };
+
+        // Cargar al iniciar y refrescar cada 60 segundos
+        window.cargarCitas = cargarCitas;
         window.addEventListener("DOMContentLoaded", cargarCitas);
+        setInterval(cargarCitas, 60000); 
     </script>
 </body>
 </html>
