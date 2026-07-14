@@ -73,14 +73,16 @@
 
         window.mostrarHoras = async (id, fecha) => {
             const medico = medicos.find(m => m.id === id);
-            const diaNombre = dias[new Date(fecha + 'T00:00:00').getDay()];
+            // Ajuste para evitar desfase de zona horaria al calcular el día
+            const d = new Date(fecha + 'T00:00:00');
+            const diaNombre = dias[d.getDay()];
             const horas = medico[diaNombre];
-            const cont = document.getElementById("seccion-seleccion");
             
             const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
             const snap = await getDocs(q);
             const ocupadas = snap.docs.map(d => d.data().hora);
             
+            const cont = document.getElementById("seccion-seleccion");
             cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>
                               <input type="date" id="fecha-selector" value="${fecha}">
                               <input type="text" id="nombre-paciente" placeholder="Nombre y Apellido" required>
@@ -88,10 +90,11 @@
                               <input type="tel" id="telefono-paciente" placeholder="Teléfono" required>
                               <h4>${diaNombre}</h4>`;
             
+            // Re-vinculamos el evento inmediatamente
             document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(id, e.target.value);
             
             if (!horas || horas.length === 0) {
-                cont.innerHTML += `<p class="error-msg">El médico no labora los días ${diaNombre}. Por favor elige otra fecha.</p>`;
+                cont.innerHTML += `<p class="error-msg">El médico no labora los días ${diaNombre}.</p>`;
             } else {
                 horas.forEach(h => {
                     const b = document.createElement("button");
