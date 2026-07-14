@@ -3,31 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <title>Reserva de Citas</title>
-    <!-- Incluye tus estilos CSS aquí -->
 </head>
 <body>
     <h1>🏥 Reserva tu Cita</h1>
+    <nav id="nav-especialidades"></nav>
     <div id="seccion-seleccion"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-        // ... inicialización de Firebase igual a la anterior ...
+        const db = getFirestore(initializeApp({
+            apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
+            authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
+            projectId: "sistemagestionnegocios-33fef",
+            storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
+            messagingSenderId: "1070762032731",
+            appId: "1:1070762032731:web:74ad150e739181c8d0897e"
+        }));
 
-        // Función para enviar la cita (Asegúrate de tener esta estructura)
-        window.confirmarCita = async () => {
-            const data = {
-                nombre: document.getElementById("nombre").value,
-                doctor: window.datosCita.doctor,
-                dia: window.datosCita.dia,
-                hora: window.datosCita.hora,
-                fecha: document.getElementById("fecha").value, // <-- ESTO ES CLAVE
-                confirmado: false
-            };
-            await addDoc(collection(db, "citas"), data);
-            alert("Cita guardada con fecha: " + data.fecha);
-        };
+        async function init() {
+            const nav = document.getElementById("nav-especialidades");
+            try {
+                const snap = await getDocs(collection(db, "medicos"));
+                const medicos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                const especialidades = [...new Set(medicos.map(m => m.especialidad))];
+                
+                especialidades.forEach(esp => {
+                    const b = document.createElement("button");
+                    b.innerText = esp;
+                    b.onclick = () => alert("Especialidad seleccionada: " + esp);
+                    nav.appendChild(b);
+                });
+            } catch (e) {
+                document.getElementById("seccion-seleccion").innerText = "Error al conectar: " + e.message;
+            }
+        }
+        window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
 </html>
