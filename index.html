@@ -26,7 +26,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -39,14 +39,22 @@
 
         const db = getFirestore(initializeApp(firebaseConfig));
         
-        // Configuramos el número de la clínica AQUÍ (seguro en el código)
-        const NUMERO_CLINICA = "584120181456"; 
-        
         let datosMedicos = [];
         let citasReservadas = [];
         let citaSeleccionada = {};
+        let telClinica = ""; // Variable vacía, se llenará desde Firebase
 
         async function inicializar() {
+            // 1. Buscamos el número directamente en tu colección 'configuracion'
+            const docRef = doc(db, "configuracion", "datos_clinica");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                telClinica = docSnap.data().telefono;
+            } else {
+                console.error("No se encontró el teléfono en la base de datos");
+            }
+
+            // 2. Cargar médicos y citas
             const medicosSnap = await getDocs(collection(db, "medicos"));
             const citasSnap = await getDocs(collection(db, "citas"));
             medicosSnap.forEach(doc => datosMedicos.push(doc.data()));
@@ -91,18 +99,16 @@
             const nombre = document.getElementById("nombre-usuario").value;
             const tel = document.getElementById("tel-usuario").value;
             
-            // Guardamos con el número de la clínica definido en el código (no el del usuario)
             await addDoc(collection(db, "citas"), { 
                 ...citaSeleccionada, 
                 paciente: nombre, 
-                telefonoPaciente: tel,
-                telefonoClinica: NUMERO_CLINICA 
+                telefonoPaciente: tel 
             });
             
             const mensaje = `Hola, confirmo una nueva cita:%0A- Dr: ${citaSeleccionada.doctor}%0A- ${citaSeleccionada.dia} a las ${citaSeleccionada.hora}%0A- Paciente: ${nombre}`;
             
-            // window.location.replace reemplaza la página actual, evitando abrir ventanas nuevas
-            window.location.replace(`https://wa.me/${NUMERO_CLINICA}?text=${mensaje}`);
+            // Ahora usa la variable que vino de la base de datos, no hay número fijo en el código
+            window.location.replace(`https://wa.me/${telClinica}?text=${mensaje}`);
         };
 
         inicializar();
