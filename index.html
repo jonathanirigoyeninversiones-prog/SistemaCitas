@@ -5,8 +5,9 @@
     <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
+        .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; }
         .slot-btn { padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
-        #form-cita { display: none; margin-top: 20px; padding: 20px; background: #fff; border-radius: 10px; }
+        #form-cita { display: none; margin-top: 20px; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input { width: 90%; padding: 10px; margin-bottom: 10px; display: block; }
     </style>
 </head>
@@ -17,7 +18,6 @@
 
     <div id="form-cita">
         <h3>Completar Reserva</h3>
-        <label>Fecha de la cita:</label>
         <input type="date" id="fecha-cita">
         <input type="text" id="nombre" placeholder="Nombres">
         <input type="text" id="apellido" placeholder="Apellidos">
@@ -39,18 +39,46 @@
             appId: "1:1070762032731:web:74ad150e739181c8d0897e"
         }));
 
-        // Bloquear fechas pasadas
         document.getElementById("fecha-cita").setAttribute("min", new Date().toISOString().split('T')[0]);
 
         let datosMedicos = [];
         async function inicializar() {
-            const snap = await getDocs(collection(db, "medicos"));
-            snap.forEach(d => datosMedicos.push({id: d.id, ...d.data()}));
-            // ... (Lógica de carga de especialidades igual a la anterior)
+            const [medicosSnap, citasSnap] = await Promise.all([getDocs(collection(db, "medicos")), getDocs(collection(db, "citas"))]);
+            medicosSnap.forEach(d => datosMedicos.push({id: d.id, ...d.data()}));
+            
+            const especialidades = Array.from(new Set(datosMedicos.map(m => m.especialidad)));
+            const nav = document.getElementById("nav-especialidades");
+            especialidades.forEach(esp => {
+                const btn = document.createElement("div");
+                btn.className = "tab"; btn.innerText = esp;
+                btn.onclick = () => filtrar(esp);
+                nav.appendChild(btn);
+            });
         }
 
-        window.abrirFormulario = (hora, doctor) => {
-            window.citaSeleccionada = { hora, doctor };
+        window.filtrar = (esp) => {
+            const cont = document.getElementById("contenedor-principal");
+            cont.innerHTML = `<h2>Médicos en ${esp}</h2>`;
+            const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
+            
+            datosMedicos.filter(m => m.especialidad === esp).forEach(medico => {
+                const div = document.createElement("div");
+                div.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>`;
+                
+                diasSemana.forEach(dia => {
+                    const horasArray = medico[dia]; // Busca Lunes, Martes, etc., directamente
+                    if (horasArray && Array.isArray(horasArray)) {
+                        div.innerHTML += `<div><strong>${dia}:</strong> ` + horasArray.map(h => 
+                            `<button class="slot-btn" onclick="abrirFormulario('${h}', '${medico.Nombre}', '${dia}')">${h}</button>`
+                        ).join(' ') + `</div><br>`;
+                    }
+                });
+                cont.appendChild(div);
+            });
+        };
+
+        window.abrirFormulario = (hora, doctor, dia) => {
+            window.citaSeleccionada = { hora, doctor, dia };
             document.getElementById("form-cita").style.display = "block";
         };
 
@@ -63,11 +91,12 @@
                 fecha: document.getElementById("fecha-cita").value,
                 ...window.citaSeleccionada
             };
-            if(!data.fecha || !data.nombre) return alert("Completa todos los datos y fecha");
+            if(!data.fecha || !data.nombre || data.telefono.length < 11) return alert("Completa los datos y fecha");
             await addDoc(collection(db, "citas"), data);
-            alert("¡Cita reservada con éxito!");
+            alert("¡Cita reservada!");
             location.reload();
         };
+
         inicializar();
     </script>
 </body>
