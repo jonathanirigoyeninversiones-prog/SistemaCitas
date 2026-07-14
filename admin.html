@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <title>Panel de Administración</title>
     <style>
-        body { display: none; font-family: sans-serif; padding: 20px; }
+        body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
+        #admin-content { display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #333; color: white; padding: 10px; cursor: pointer; } /* cursor: pointer para indicar que se puede tocar */
+        th { background-color: #333; color: white; padding: 10px; cursor: pointer; }
         td { border: 1px solid #ddd; padding: 10px; }
         .btn-confirm { background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; }
         .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
-        
-        /* Estilo para el rectángulo verde */
-        .badge-confirmado { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 0.9em; }
+        .badge-confirmado { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        #buscador { margin-bottom: 15px; padding: 10px; width: 300px; }
     </style>
 </head>
 <body>
@@ -27,6 +27,7 @@
 
     <div id="admin-content">
         <h1>Citas Pendientes</h1>
+        <input type="text" id="buscador" placeholder="Filtrar por nombre, cédula o teléfono..." onkeyup="filtrarTabla()">
         <table>
             <thead>
                 <tr>
@@ -58,31 +59,31 @@
         window.validar = async () => {
             const u = document.getElementById("user").value;
             const p = document.getElementById("pass").value;
-            const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
-            if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
-                document.getElementById("login-layer").style.display = "none";
-                document.getElementById("admin-content").style.display = "block";
-                cargarCitas();
-            } else { alert("Credenciales incorrectas"); }
+            try {
+                const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
+                if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
+                    document.getElementById("login-layer").style.display = "none";
+                    document.getElementById("admin-content").style.display = "block";
+                    cargarCitas();
+                    setInterval(cargarCitas, 60000); // Actualiza cada 1 minuto
+                } else { alert("Credenciales incorrectas"); }
+            } catch(e) { alert("Error de conexión"); }
         };
 
         async function cargarCitas() {
             const snap = await getDocs(collection(db, "citas"));
             listaCitas = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizarTabla();
+            renderizarTabla(listaCitas);
         }
 
-        function renderizarTabla() {
+        function renderizarTabla(data) {
             const tbody = document.getElementById("lista-citas");
             tbody.innerHTML = "";
-            listaCitas.forEach(c => {
+            data.forEach(c => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${c.nombre || ''}</td>
-                    <td>${c.cedula || ''}</td>
-                    <td>${c.telefono || ''}</td>
-                    <td>${c.doctor || ''} - ${c.hora || ''}</td>
-                    <td>${c.fecha || ''}</td>
+                    <td>${c.nombre || ''}</td><td>${c.cedula || ''}</td><td>${c.telefono || ''}</td>
+                    <td>${c.doctor || ''} - ${c.hora || ''}</td><td>${c.fecha || ''}</td>
                     <td>${c.confirmado ? '<span class="badge-confirmado">Confirmado</span>' : 'Pendiente'}</td>
                     <td>
                         ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmar('${c.id}')">Confirmar</button>` : ''}
@@ -93,18 +94,24 @@
             });
         }
 
+        window.filtrarTabla = () => {
+            const filtro = document.getElementById("buscador").value.toLowerCase();
+            const filtrados = listaCitas.filter(c => 
+                (c.nombre?.toLowerCase().includes(filtro)) || 
+                (c.cedula?.toString().includes(filtro)) || 
+                (c.telefono?.toString().includes(filtro))
+            );
+            renderizarTabla(filtrados);
+        };
+
         window.ordenarPorFecha = () => {
             ordenAscendente = !ordenAscendente;
-            listaCitas.sort((a, b) => {
-                const dateA = new Date(a.fecha);
-                const dateB = new Date(b.fecha);
-                return ordenAscendente ? dateA - dateB : dateB - dateA;
-            });
-            renderizarTabla();
+            listaCitas.sort((a, b) => ordenAscendente ? new Date(a.fecha) - new Date(b.fecha) : new Date(b.fecha) - new Date(a.fecha));
+            renderizarTabla(listaCitas);
         };
 
         window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { confirmado: true }); cargarCitas(); };
-        window.cancelar = async (id) => { if(confirm("¿Seguro?")) { await deleteDoc(doc(db, "citas", id)); cargarCitas(); } };
+        window.cancelar = async (id) => { if(confirm("¿Eliminar cita?")) { await deleteDoc(doc(db, "citas", id)); cargarCitas(); } };
     </script>
 </body>
 </html>
