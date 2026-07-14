@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>Sistema de Reservas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #ddd; margin: 5px; display: inline-block; border-radius: 5px; }
         .accordion { margin: 10px 0; background: white; padding: 10px; border: 1px solid #ccc; }
         .slot-btn { padding: 8px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; margin: 5px; }
-        #form-cita { display: none; margin-top: 20px; padding: 20px; background: white; border: 1px solid #000; }
+        #form-cita { display: none; margin-top: 20px; padding: 20px; background: #fff; border: 2px solid #4CAF50; }
     </style>
 </head>
 <body>
@@ -18,8 +18,8 @@
 
     <div id="form-cita">
         <h3>Completar Reserva</h3>
-        <input type="text" id="nombre-usuario" placeholder="Tu nombre completo"><br><br>
-        <input type="text" id="tel-usuario" placeholder="Tu número de teléfono"><br><br>
+        <input type="text" id="nombre-usuario" placeholder="Nombre completo"><br><br>
+        <input type="text" id="tel-usuario" placeholder="Teléfono"><br><br>
         <button id="btn-confirmar">Confirmar Cita</button>
     </div>
 
@@ -37,31 +37,64 @@
         };
 
         const db = getFirestore(initializeApp(firebaseConfig));
+        let datosMedicos = [];
         let citaSeleccionada = {};
 
-        // Función para mostrar el formulario
+        async function cargarDatos() {
+            const querySnapshot = await getDocs(collection(db, "medicos"));
+            const especialidades = new Set();
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                datosMedicos.push(data);
+                especialidades.add(data.especialidad);
+            });
+            renderizarTabs(Array.from(especialidades));
+        }
+
+        function renderizarTabs(lista) {
+            const nav = document.getElementById("nav-especialidades");
+            lista.forEach(esp => {
+                const btn = document.createElement("div");
+                btn.className = "tab";
+                btn.innerText = esp;
+                btn.onclick = () => filtrar(esp);
+                nav.appendChild(btn);
+            });
+        }
+
+        function filtrar(esp) {
+            const cont = document.getElementById("contenedor-principal");
+            cont.innerHTML = `<h2>Médicos en ${esp}</h2>`;
+            datosMedicos.filter(m => m.especialidad === esp).forEach(medico => {
+                const div = document.createElement("div");
+                div.innerHTML = `<h3>Dr. ${medico.Nombre || medico.nombre}</h3>`;
+                if (medico.horarios) {
+                    for (const [dia, horas] of Object.entries(medico.horarios)) {
+                        div.innerHTML += `<details class="accordion"><summary>${dia}</summary>
+                        <div class="slots">${horas.map(h => `<button class="slot-btn" onclick="abrirFormulario('${h}', '${medico.Nombre}', '${dia}')">${h}</button>`).join('')}</div>
+                        </details>`;
+                    }
+                }
+                cont.appendChild(div);
+            });
+        }
+
         window.abrirFormulario = (hora, doctor, dia) => {
             citaSeleccionada = { hora, doctor, dia };
             document.getElementById("form-cita").style.display = "block";
         };
 
-        // Función para guardar en Firebase
         document.getElementById("btn-confirmar").onclick = async () => {
-            const nombre = document.getElementById("nombre-usuario").value;
-            const telefono = document.getElementById("tel-usuario").value;
-            
             await addDoc(collection(db, "citas"), {
                 ...citaSeleccionada,
-                paciente: nombre,
-                telefono: telefono,
-                fechaReserva: new Date().toISOString()
+                paciente: document.getElementById("nombre-usuario").value,
+                telefono: document.getElementById("tel-usuario").value
             });
-
-            alert("¡Cita reservada con éxito!");
+            alert("¡Cita reservada!");
             location.reload();
         };
 
-        // ... (Tu lógica anterior para cargar médicos sigue igual)
+        cargarDatos();
     </script>
 </body>
 </html>
