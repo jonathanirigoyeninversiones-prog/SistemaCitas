@@ -8,6 +8,7 @@
         .tab { cursor: pointer; padding: 10px 20px; background: #ddd; margin: 5px; display: inline-block; border-radius: 5px; }
         .accordion { margin: 10px 0; background: white; padding: 10px; border: 1px solid #ccc; }
         .slot-btn { padding: 8px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; margin: 5px; }
+        .slot-btn:disabled { background: #888 !important; cursor: not-allowed; }
         #form-cita { display: none; margin-top: 20px; padding: 20px; background: #fff; border: 2px solid #4CAF50; }
     </style>
 </head>
@@ -25,7 +26,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -38,16 +39,18 @@
 
         const db = getFirestore(initializeApp(firebaseConfig));
         let datosMedicos = [];
+        let citasReservadas = [];
         let citaSeleccionada = {};
 
-        async function cargarDatos() {
-            const querySnapshot = await getDocs(collection(db, "medicos"));
-            const especialidades = new Set();
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                datosMedicos.push(data);
-                especialidades.add(data.especialidad);
-            });
+        async function inicializar() {
+            // Cargar médicos y citas existentes para bloquear botones
+            const medicosSnap = await getDocs(collection(db, "medicos"));
+            const citasSnap = await getDocs(collection(db, "citas"));
+            
+            medicosSnap.forEach(doc => datosMedicos.push(doc.data()));
+            citasSnap.forEach(doc => citasReservadas.push(doc.data()));
+            
+            const especialidades = new Set(datosMedicos.map(m => m.especialidad));
             renderizarTabs(Array.from(especialidades));
         }
 
@@ -67,13 +70,13 @@
             cont.innerHTML = `<h2>Médicos en ${esp}</h2>`;
             datosMedicos.filter(m => m.especialidad === esp).forEach(medico => {
                 const div = document.createElement("div");
-                div.innerHTML = `<h3>Dr. ${medico.Nombre || medico.nombre}</h3>`;
-                if (medico.horarios) {
-                    for (const [dia, horas] of Object.entries(medico.horarios)) {
-                        div.innerHTML += `<details class="accordion"><summary>${dia}</summary>
-                        <div class="slots">${horas.map(h => `<button class="slot-btn" onclick="abrirFormulario('${h}', '${medico.Nombre}', '${dia}')">${h}</button>`).join('')}</div>
-                        </details>`;
-                    }
+                div.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>`;
+                for (const [dia, horas] of Object.entries(medico.horarios)) {
+                    div.innerHTML += `<details class="accordion"><summary>${dia}</summary>
+                    <div class="slots">${horas.map(h => {
+                        const ocupada = citasReservadas.find(c => c.doctor === medico.Nombre && c.dia === dia && c.hora === h);
+                        return `<button class="slot-btn" ${ocupada ? 'disabled' : ''} onclick="abrirFormulario('${h}', '${medico.Nombre}', '${dia}')">${h}</button>`;
+                    }).join('')}</div></details>`;
                 }
                 cont.appendChild(div);
             });
@@ -85,29 +88,20 @@
         };
 
         document.getElementById("btn-confirmar").onclick = async () => {
-            const citasRef = collection(db, "citas");
-            const q = query(citasRef, 
-                where("doctor", "==", citaSeleccionada.doctor),
-                where("dia", "==", citaSeleccionada.dia),
-                where("hora", "==", citaSeleccionada.hora)
-            );
-
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                alert("¡Lo siento! Esta hora ya ha sido reservada.");
-            } else {
-                await addDoc(citasRef, {
-                    ...citaSeleccionada,
-                    paciente: document.getElementById("nombre-usuario").value,
-                    telefono: document.getElementById("tel-usuario").value
-                });
-                alert("¡Cita reservada con éxito!");
-                location.reload();
-            }
+            const nombre = document.getElementById("nombre-usuario").value;
+            const tel = document.getElementById("tel-usuario").value;
+            
+            await addDoc(collection(db, "citas"), { ...citaSeleccionada, paciente: nombre, telefono: tel });
+            
+            // Enviar a WhatsApp
+            const mensaje = `Hola, quiero confirmar mi cita: %0A- Doctor: ${citaSeleccionada.doctor}%0A- Día: ${citaSeleccionada.dia}%0A- Hora: ${citaSeleccionada.hora}%0A- Paciente: ${nombre}%0A- Teléfono: ${tel}`;
+            window.open(`https://wa.me/584120181456?text=${mensaje}`, '_blank');
+            
+            alert("¡Cita reservada!");
+            location.reload();
         };
 
-        cargarDatos();
+        inicializar();
     </script>
 </body>
 </html>
