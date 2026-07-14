@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>--Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
@@ -10,7 +10,6 @@
         .slot-btn:disabled { background: #ccc; cursor: not-allowed; }
         input { display: block; margin: 10px 0; padding: 8px; width: 250px; }
         
-        /* Estilos de Modales */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
         .modal-content { background-color: white; margin: 15% auto; padding: 30px; border-radius: 15px; width: 80%; max-width: 350px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .btn-modal { padding: 10px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; }
@@ -23,7 +22,6 @@
     <nav id="nav-especialidades"></nav>
     <div id="seccion-seleccion"></div>
 
-    <!-- Modal Gracias -->
     <div id="modalGracias" class="modal">
         <div class="modal-content">
             <h2>¡Cita Reservada!</h2>
@@ -32,12 +30,11 @@
         </div>
     </div>
 
-    <!-- Modal Error/No disponible -->
     <div id="modalNoDisponible" class="modal">
         <div class="modal-content">
             <h2 style="color: #dc3545;">Médico no disponible</h2>
             <p>El profesional seleccionado no labora en esta fecha.</p>
-            <button class="btn-modal btn-error" onclick="cerrarModalNoDisponible()">Aceptar</button>
+            <button class="btn-modal btn-error" onclick="document.getElementById('modalNoDisponible').style.display='none'">Aceptar</button>
         </div>
     </div>
 
@@ -104,8 +101,8 @@
             cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>
                               <input type="date" id="fecha-selector" value="${fecha}">
                               <input type="text" id="nombre-paciente" placeholder="Nombre y Apellido" required>
-                              <input type="number" id="cedula-paciente" placeholder="Cédula" required>
-                              <input type="tel" id="telefono-paciente" placeholder="Teléfono" required>
+                              <input type="text" id="cedula-paciente" placeholder="Cédula (Máx 8 números, no inicia en 0)" required>
+                              <input type="tel" id="telefono-paciente" placeholder="Teléfono (Ej: 04141234567)" required>
                               <h4>${diaNombre}</h4>`;
             
             document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(id, e.target.value);
@@ -118,7 +115,15 @@
                     const nombre = document.getElementById("nombre-paciente").value;
                     const cedula = document.getElementById("cedula-paciente").value;
                     const telefono = document.getElementById("telefono-paciente").value;
-                    if(!nombre || !cedula || !telefono) return alert("Completa los datos");
+                    
+                    // Validación Cédula: Solo números, entre 1 y 8 dígitos, no empieza en 0
+                    const regexCedula = /^[1-9]\d{0,7}$/;
+                    // Validación Teléfono Venezuela: 11 dígitos, empieza por 04xx
+                    const regexTel = /^04[1246]\d{7}$/;
+
+                    if(!regexCedula.test(cedula)) return alert("Cédula inválida: Solo números (máximo 8) y no debe comenzar con 0.");
+                    if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe ser formato venezolano (ej: 04141234567).");
+
                     await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
                     document.getElementById("modalGracias").style.display = "block";
                 };
@@ -127,10 +132,6 @@
         };
 
         window.cerrarModal = () => { location.reload(); };
-        window.cerrarModalNoDisponible = () => { 
-            document.getElementById("modalNoDisponible").style.display = "none";
-            // Recargamos el flujo del médico seleccionado para que el calendario se reinicie
-        };
         window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
