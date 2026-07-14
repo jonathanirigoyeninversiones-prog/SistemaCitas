@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>AA Reserva de Citas</title>
+    <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
@@ -83,8 +83,10 @@
         };
 
         window.mostrarHoras = async (id, fecha) => {
-            const hoy = new Date().toISOString().split('T')[0];
-            if (fecha < hoy) {
+            const ahora = new Date();
+            const hoyStr = ahora.toISOString().split('T')[0];
+            
+            if (fecha < hoyStr) {
                 document.getElementById("msgError").innerText = "No puedes seleccionar fechas pasadas.";
                 document.getElementById("modalNoDisponible").style.display = "block";
                 return;
@@ -118,18 +120,24 @@
             horas.forEach(h => {
                 const b = document.createElement("button");
                 b.className = "slot-btn"; b.innerText = h;
+                
+                // Lógica de deshabilitar: si es hoy y la hora ya pasó
                 if (ocupadas.includes(h)) b.disabled = true;
+                if (fecha === hoyStr) {
+                    const horaTurno = parseInt(h.split(':')[0]);
+                    if (ahora.getHours() >= horaTurno) b.disabled = true;
+                }
+
                 b.onclick = async () => {
                     const nombre = document.getElementById("nombre-paciente").value;
                     const cedula = document.getElementById("cedula-paciente").value;
                     const telefono = document.getElementById("telefono-paciente").value.trim();
                     
                     const regexCedula = /^[1-9]\d{0,7}$/;
-                    // Regex ajustada para asegurar exactamente 11 números comenzando por 04
-                    const regexTel = /^04[1246]\d{7}$/;
+                    const regexTel = /^\d{11}$/; // Valida que sean exactamente 11 números
 
                     if(!regexCedula.test(cedula)) return alert("Cédula inválida: Solo números (máximo 8) y no debe comenzar con 0.");
-                    if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe ser formato venezolano de 11 dígitos (ej: 04141234567).");
+                    if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe contener exactamente 11 dígitos.");
 
                     await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
                     
