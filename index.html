@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>,,Reserva de Citas</title>
+    <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
@@ -122,17 +122,17 @@
                 b.onclick = async () => {
                     const nombre = document.getElementById("nombre-paciente").value;
                     const cedula = document.getElementById("cedula-paciente").value;
-                    const telefono = document.getElementById("telefono-paciente").value;
+                    const telefono = document.getElementById("telefono-paciente").value.trim();
                     
                     const regexCedula = /^[1-9]\d{0,7}$/;
+                    // Regex ajustada para asegurar exactamente 11 números comenzando por 04
                     const regexTel = /^04[1246]\d{7}$/;
 
                     if(!regexCedula.test(cedula)) return alert("Cédula inválida: Solo números (máximo 8) y no debe comenzar con 0.");
-                    if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe ser formato venezolano (ej: 04141234567).");
+                    if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe ser formato venezolano de 11 dígitos (ej: 04141234567).");
 
                     await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
                     
-                    // Limpiar campos tras éxito
                     document.getElementById("nombre-paciente").value = "";
                     document.getElementById("cedula-paciente").value = "";
                     document.getElementById("telefono-paciente").value = "";
