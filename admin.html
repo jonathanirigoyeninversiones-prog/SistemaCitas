@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Panel de Administración</title>
     <style>
-        /* Ocultamos el cuerpo por defecto */
         body { display: none; font-family: sans-serif; padding: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background-color: #333; color: white; padding: 10px; text-align: left; }
@@ -29,7 +28,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -42,20 +41,24 @@
 
         async function verificarAcceso() {
             const user = prompt("Usuario:");
-            const pass = prompt("Contraseña:");
-            const snap = await getDocs(collection(db, "admin"));
+            const pass = prompt("Clave:");
             
-            // Verificamos si existe algún documento con ese user y pass
-            const esValido = snap.docs.some(d => d.data().user === user && d.data().pass === pass);
+            // BUSCAMOS ESPECÍFICAMENTE EN LA RUTA: configuracion -> credenciales_admin
+            const docRef = doc(db, "configuracion", "credenciales_admin");
+            const docSnap = await getDoc(docRef);
             
-            if (esValido) {
-                document.body.style.display = "block"; // Mostramos el contenido
-                cargarCitas();
-                setInterval(cargarCitas, 60000);
-            } else {
-                alert("Acceso denegado");
-                window.location.href = "index.html";
+            if (docSnap.exists()) {
+                const creds = docSnap.data();
+                if (creds.usuario === user && creds.clave === pass) {
+                    document.body.style.display = "block";
+                    cargarCitas();
+                    setInterval(cargarCitas, 60000);
+                    return;
+                }
             }
+            
+            alert("Usuario o clave incorrectos");
+            window.location.href = "index.html";
         }
 
         async function cargarCitas() {
