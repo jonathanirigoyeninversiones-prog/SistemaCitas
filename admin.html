@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>XXPanel de Administración</title>
+    <title>XXXPanel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -65,7 +65,7 @@
         }));
 
         let listaCitas = [];
-        let ordenAscendente = true; // Por defecto más cercano a más lejano
+        let ordenAscendente = true;
 
         const formatearCedula = (ced) => {
             let s = ced.toString().replace(/\D/g, '');
@@ -87,7 +87,8 @@
         window.validar = async () => {
             const u = document.getElementById("user").value;
             const p = document.getElementById("pass").value;
-            const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
+            // Corregido a: configuracion / datos_clinica
+            const docSnap = await getDoc(doc(db, "configuracion", "datos_clinica"));
             if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
@@ -105,14 +106,11 @@
         function renderizarTabla(data) {
             const tbody = document.getElementById("lista-citas");
             tbody.innerHTML = "";
-            
-            // Ordenamiento por fecha
             const dataOrdenada = [...data].sort((a, b) => {
                 const fechaA = new Date(a.fecha);
                 const fechaB = new Date(b.fecha);
                 return ordenAscendente ? fechaA - fechaB : fechaB - fechaA;
             });
-
             dataOrdenada.forEach(c => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -154,7 +152,7 @@
         };
 
         window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { confirmado: true }); cargarCitas(); };
-        window.cancelar = async (id) => { if(confirm("¿Eliminar cita?")) { await deleteDoc(db, "citas", id)); cargarCitas(); } };
+        window.cancelar = async (id) => { if(confirm("¿Eliminar cita?")) { await deleteDoc(doc(db, "citas", id)); cargarCitas(); } };
     </script>
 </body>
 </html>
