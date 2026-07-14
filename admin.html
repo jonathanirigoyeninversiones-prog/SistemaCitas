@@ -2,61 +2,48 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>Panel de Administración</title>
 </head>
 <body>
-    <h1>🏥 Reserva tu Cita</h1>
-    <nav id="nav-especialidades"></nav>
-    <div id="seccion-seleccion">Cargando sistema...</div>
+    <h1>Citas Pendientes</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Paciente</th>
+                <th>Cita</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody id="lista-citas"></tbody>
+    </table>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-        // Inicialización segura
-        try {
-            const firebaseConfig = {
-                apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
-                authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
-                projectId: "sistemagestionnegocios-33fef",
-                storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
-                messagingSenderId: "1070762032731",
-                appId: "1:1070762032731:web:74ad150e739181c8d0897e"
-            };
-            
-            const db = getFirestore(initializeApp(firebaseConfig));
-            const cont = document.getElementById("seccion-seleccion");
+        const db = getFirestore(initializeApp({
+            apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
+            authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
+            projectId: "sistemagestionnegocios-33fef",
+            storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
+            messagingSenderId: "1070762032731",
+            appId: "1:1070762032731:web:74ad150e739181c8d0897e"
+        }));
 
-            async function init() {
-                try {
-                    const snap = await getDocs(collection(db, "medicos"));
-                    const medicos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                    
-                    if(medicos.length === 0) {
-                        cont.innerHTML = "No hay médicos registrados.";
-                        return;
-                    }
-
-                    const nav = document.getElementById("nav-especialidades");
-                    nav.innerHTML = "";
-                    const especialidades = [...new Set(medicos.map(m => m.especialidad))];
-                    
-                    especialidades.forEach(esp => {
-                        const b = document.createElement("button");
-                        b.innerText = esp;
-                        b.onclick = () => alert("Especialidad: " + esp);
-                        nav.appendChild(b);
-                    });
-                    cont.innerHTML = "Selecciona una especialidad arriba.";
-                } catch (err) {
-                    cont.innerHTML = "Error cargando datos: " + err.message;
-                }
-            }
-
-            init();
-        } catch (err) {
-            document.body.innerHTML = "<h1>Error crítico:</h1><p>" + err.message + "</p>";
+        async function cargarCitas() {
+            const tbody = document.getElementById("lista-citas");
+            const snap = await getDocs(collection(db, "citas")); // IMPORTANTE: Colección 'citas'
+            tbody.innerHTML = "";
+            snap.forEach(doc => {
+                const c = doc.data();
+                tbody.innerHTML += `<tr>
+                    <td>${c.nombre || 'N/A'}</td>
+                    <td>${c.doctor || 'N/A'} - ${c.hora || 'N/A'}</td>
+                    <td>${c.fecha || 'Sin fecha'}</td>
+                </tr>`;
+            });
         }
+        window.addEventListener("DOMContentLoaded", cargarCitas);
     </script>
 </body>
 </html>
