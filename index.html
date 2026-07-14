@@ -4,34 +4,33 @@
     <meta charset="UTF-8">
     <title>Reserva de Citas</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
-        .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; }
-        .slot-btn { padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
-        .slot-btn:disabled { background: #adb5bd !important; cursor: not-allowed; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f8f9fa; }
+        .tab { cursor: pointer; padding: 12px 25px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 30px; transition: 0.3s; }
+        .slot-btn { padding: 12px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 8px; font-weight: bold; }
+        .slot-btn:disabled { background: #ced4da; cursor: not-allowed; }
+        #seccion-seleccion { margin-top: 20px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
         #modal-confirmacion { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 15px; text-align: center; }
-        #form-cita { display: none; margin-top: 20px; padding: 20px; background: #fff; border-radius: 10px; }
-        input { width: 90%; padding: 10px; margin-bottom: 10px; display: block; }
+        .modal-content { background: white; padding: 40px; border-radius: 20px; text-align: center; }
     </style>
 </head>
 <body>
-    <h1>🏥 Reservar Cita</h1>
-    <nav id="nav-especialidades"></nav>
-    <div id="contenedor-principal"></div>
+    <h1>🏥 Reserva tu Cita</h1>
+    <div id="nav-especialidades"></div>
+    <div id="seccion-seleccion"></div>
 
-    <div id="form-cita">
-        <h3>Completar Reserva</h3>
-        <input type="date" id="fecha-cita">
+    <div id="form-cita" style="display:none; margin-top:20px;">
+        <h3>Datos Personales</h3>
         <input type="text" id="nombre" placeholder="Nombres">
         <input type="text" id="apellido" placeholder="Apellidos">
         <input type="number" id="cedula" placeholder="Cédula">
         <input type="tel" id="telefono" placeholder="Teléfono">
-        <button id="btn-confirmar" class="slot-btn">Confirmar Reserva</button>
+        <button id="btn-confirmar" class="slot-btn">Finalizar Reserva</button>
     </div>
 
     <div id="modal-confirmacion">
         <div class="modal-content">
-            <h2>¡Cita Reservada! ✨</h2>
+            <h2>¡Cita Reservada con éxito! ✨</h2>
             <button onclick="location.reload()" class="slot-btn">Aceptar</button>
         </div>
     </div>
@@ -55,22 +54,72 @@
             const [mSnap, cSnap] = await Promise.all([getDocs(collection(db, "medicos")), getDocs(collection(db, "citas"))]);
             mSnap.forEach(d => datosMedicos.push({id: d.id, ...d.data()}));
             citasReservadas = cSnap.docs.map(d => d.data());
-            // ... (lógica de botones igual)
+            
+            const especialidades = Array.from(new Set(datosMedicos.map(m => m.especialidad)));
+            especialidades.forEach(esp => {
+                const btn = document.createElement("div");
+                btn.className = "tab"; btn.innerText = esp;
+                btn.onclick = () => mostrarMedicos(esp);
+                document.getElementById("nav-especialidades").appendChild(btn);
+            });
         }
 
-        document.getElementById("btn-confirmar").onclick = async () => {
-            const fecha = document.getElementById("fecha-cita").value;
-            const data = { /* ... tus datos ... */ fecha, ...window.citaSeleccionada };
-            
-            // VERIFICACIÓN: ¿Ya existe una cita en esa fecha y hora?
-            const existe = citasReservadas.find(c => c.fecha === fecha && c.hora === data.hora && c.doctor === data.doctor);
-            if(existe) return alert("¡Esta cita ya fue tomada para esa fecha!");
+        window.mostrarMedicos = (esp) => {
+            const cont = document.getElementById("seccion-seleccion");
+            cont.innerHTML = `<h2>Selecciona un Médico</h2>`;
+            datosMedicos.filter(m => m.especialidad === esp).forEach(medico => {
+                const btn = document.createElement("button");
+                btn.className = "slot-btn"; btn.innerText = "Dr. " + medico.Nombre;
+                btn.onclick = () => elegirFecha(medico);
+                cont.appendChild(btn);
+            });
+        };
 
+        window.elegirFecha = (medico) => {
+            const cont = document.getElementById("seccion-seleccion");
+            cont.innerHTML = `<h3>Fecha para ${medico.Nombre}</h3>
+            <input type="date" id="fecha-selector" onchange="mostrarHoras('${medico.id}')">`;
+            document.getElementById("fecha-selector").setAttribute("min", new Date().toISOString().split('T')[0]);
+            window.medicoSeleccionado = medico;
+        };
+
+        window.mostrarHoras = (medicoId) => {
+            const fecha = document.getElementById("fecha-selector").value;
+            const diaSemana = new Date(fecha).toLocaleDateString('es-ES', { weekday: 'long' });
+            const nombreDia = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+            
+            const cont = document.getElementById("seccion-seleccion");
+            const medico = window.medicoSeleccionado;
+            const horasDisponibles = medico[nombreDia] || [];
+
+            let html = `<h3>Horas para el ${nombreDia}</h3>`;
+            horasDisponibles.forEach(h => {
+                const ocupada = citasReservadas.find(c => c.doctor === medico.Nombre && c.fecha === fecha && c.hora === h);
+                html += ocupada 
+                    ? `<button class="slot-btn" disabled>${h} (Ocupado)</button>`
+                    : `<button class="slot-btn" onclick="abrirFormulario('${h}', '${fecha}')">${h}</button>`;
+            });
+            cont.innerHTML += html;
+        };
+
+        window.abrirFormulario = (hora, fecha) => {
+            window.datosCita = { hora, fecha, doctor: window.medicoSeleccionado.Nombre };
+            document.getElementById("form-cita").style.display = "block";
+        };
+
+        document.getElementById("btn-confirmar").onclick = async () => {
+            const data = {
+                nombre: document.getElementById("nombre").value,
+                apellido: document.getElementById("apellido").value,
+                cedula: document.getElementById("cedula").value,
+                telefono: document.getElementById("telefono").value,
+                ...window.datosCita
+            };
             await addDoc(collection(db, "citas"), data);
             document.getElementById("modal-confirmacion").style.display = "flex";
-            document.getElementById("form-cita").style.display = "none";
         };
-        // ... (resto del código)
+
+        inicializar();
     </script>
 </body>
 </html>
