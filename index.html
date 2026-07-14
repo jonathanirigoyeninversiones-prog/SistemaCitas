@@ -2,246 +2,32 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas Médicas</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f8f9fa; color: #333; }
-        h1 { color: #0056b3; }
-        .tab { cursor: pointer; padding: 12px 25px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 30px; font-weight: bold; transition: background 0.2s; }
-        .tab:hover { background: #0056b3; }
-        .slot-btn { padding: 12px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 8px; font-weight: bold; transition: opacity 0.2s; }
-        .slot-btn:hover { opacity: 0.9; }
-        .slot-btn:disabled { background: #ced4da !important; color: #6c757d; cursor: not-allowed; }
-        #seccion-seleccion { margin-top: 20px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        #form-cita { display: none; margin-top: 20px; padding: 25px; background: white; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 500px; }
-        input { width: 100%; padding: 12px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        #modal-confirmacion { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 40px; border-radius: 20px; text-align: center; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .error-box { padding: 15px; background: #f8d7da; border-left: 5px solid #dc3545; color: #721c24; border-radius: 8px; margin-top: 15px; font-weight: bold; }
-    </style>
+    <title>Reserva de Citas</title>
+    <!-- Incluye tus estilos CSS aquí -->
 </head>
 <body>
-
-    <h1>🏥 Reserva tu Cita Médica</h1>
-    <p>Selecciona una especialidad para comenzar:</p>
-    <nav id="nav-especialidades"></nav>
-    
-    <div id="seccion-seleccion">
-        <p style="color: #666;">Por favor, elige una especialidad arriba.</p>
-    </div>
-
-    <div id="form-cita">
-        <h3>📝 Completar Datos de la Reserva</h3>
-        <p id="resumen-cita-texto" style="font-weight: bold; color: #0056b3;"></p>
-        
-        <label for="nombre">Nombre:</label>
-        <input type="text" id="nombre" placeholder="Ej. Juan">
-        
-        <label for="apellido">Apellido:</label>
-        <input type="text" id="apellido" placeholder="Ej. Pérez">
-        
-        <label for="cedula">Cédula de Identidad:</label>
-        <input type="number" id="cedula" placeholder="Solo números">
-        
-        <label for="telefono">Número Telefónico:</label>
-        <input type="tel" id="telefono" placeholder="Ej. 04121234567">
-        
-        <button id="btn-confirmar" class="slot-btn" style="width: 100%; margin-top: 10px;">Confirmar y Agendar Cita</button>
-    </div>
-
-    <div id="modal-confirmacion">
-        <div class="modal-content">
-            <h2 style="color: #28a745; margin-top: 0;">¡Cita Reservada! ✨</h2>
-            <p>Tu solicitud ha sido registrada correctamente en el sistema.</p>
-            <button onclick="location.reload()" class="slot-btn" style="background: #007bff; width: 120px;">Aceptar</button>
-        </div>
-    </div>
+    <h1>🏥 Reserva tu Cita</h1>
+    <div id="seccion-seleccion"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-        const db = getFirestore(initializeApp({
-            apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
-            authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
-            projectId: "sistemagestionnegocios-33fef",
-            storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
-            messagingSenderId: "1070762032731",
-            appId: "1:1070762032731:web:74ad150e739181c8d0897e"
-        }));
+        // ... inicialización de Firebase igual a la anterior ...
 
-        let datosMedicos = [];
-        let citasReservadas = [];
-
-        async function inicializar() {
-            try {
-                const [medicosSnap, citasSnap] = await Promise.all([
-                    getDocs(collection(db, "medicos")),
-                    getDocs(collection(db, "citas"))
-                ]);
-                
-                datosMedicos = [];
-                medicosSnap.forEach(d => datosMedicos.push({ id: d.id, ...d.data() }));
-                
-                citasReservadas = [];
-                citasSnap.forEach(d => citasReservadas.push(d.data()));
-
-                const nav = document.getElementById("nav-especialidades");
-                nav.innerHTML = "";
-                
-                const especialidades = Array.from(new Set(datosMedicos.map(m => m.especialidad).filter(Boolean)));
-                
-                especialidades.forEach(esp => {
-                    const btn = document.createElement("div");
-                    btn.className = "tab";
-                    btn.innerText = esp;
-                    btn.onclick = () => window.mostrarMedicos(esp);
-                    nav.appendChild(btn);
-                });
-            } catch (error) {
-                console.error("Error al inicializar la app:", error);
-            }
-        }
-
-        window.mostrarMedicos = (esp) => {
-            document.getElementById("form-cita").style.display = "none";
-            const cont = document.getElementById("seccion-seleccion");
-            cont.innerHTML = `<h2>Médicos disponibles en ${esp}</h2>`;
-            
-            const medicosFiltrados = datosMedicos.filter(m => m.especialidad === esp);
-            
-            if(medicosFiltrados.length === 0) {
-                cont.innerHTML += `<p>No hay médicos registrados en esta especialidad.</p>`;
-                return;
-            }
-
-            medicosFiltrados.forEach(medico => {
-                const btn = document.createElement("button");
-                btn.className = "slot-btn";
-                btn.style.background = "#007bff";
-                btn.innerText = `Dr. ${medico.Nombre}`;
-                btn.onclick = () => { 
-                    window.medicoSeleccionado = medico; 
-                    window.elegirFecha(); 
-                };
-                cont.appendChild(btn);
-            });
-        };
-
-        window.elegirFecha = () => {
-            document.getElementById("form-cita").style.display = "none";
-            const cont = document.getElementById("seccion-seleccion");
-            const medico = window.medicoSeleccionado;
-            
-            cont.innerHTML = `
-                <h2>Agenda del Dr. ${medico.Nombre}</h2>
-                <p>Selecciona el día en el calendario para verificar disponibilidad:</p>
-                <input type="date" id="fecha-selector" style="max-width:300px;">
-                <div id="contenedor-horas" style="margin-top: 20px;"></div>
-            `;
-            
-            const inputFecha = document.getElementById("fecha-selector");
-            inputFecha.setAttribute("min", new Date().toISOString().split('T')[0]);
-            inputFecha.onchange = () => window.mostrarHoras();
-        };
-
-        window.mostrarHoras = () => {
-            document.getElementById("form-cita").style.display = "none";
-            const fechaValor = document.getElementById("fecha-selector").value;
-            if (!fechaValor) return;
-
-            const diasSemana = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
-            const diasSemanaVisual = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            
-            const fechaObj = new Date(fechaValor + 'T00:00:00');
-            const indexDia = fechaObj.getDay();
-            const nombreDiaDb = diasSemana[indexDia];
-            const nombreDiaVisual = diasSemanaVisual[indexDia];
-            
-            const contHoras = document.getElementById("contenedor-horas");
-            const medico = window.medicoSeleccionado;
-            
-            let horasDisponibles = medico[nombreDiaDb] || medico[nombreDiaVisual] || null;
-
-            contHoras.innerHTML = `<h3>Horarios para el día ${nombreDiaVisual} (${fechaValor.split('-').reverse().join('/')}):</h3>`;
-
-            if (!horasDisponibles || !Array.isArray(horasDisponibles) || horasDisponibles.length === 0) {
-                contHoras.innerHTML += `
-                    <div class="error-box">
-                        Día no disponible. El médico no ofrece consultas este día de la semana. Por favor, intenta con otra fecha.
-                    </div>`;
-                return;
-            }
-
-            let htmlBotones = '<div style="margin-top:10px;">';
-            horasDisponibles.forEach(h => {
-                const ocupada = citasReservadas.find(c => 
-                    c.doctor === medico.Nombre && 
-                    c.fecha === fechaValor && 
-                    c.hora === h
-                );
-                
-                if (ocupada) {
-                    htmlBotones += `<button class="slot-btn" disabled>${h} (Ocupado)</button>`;
-                } else {
-                    htmlBotones += `<button class="slot-btn" onclick="window.abrirFormulario('${h}', '${fechaValor}', '${nombreDiaVisual}')">${h}</button>`;
-                }
-            });
-            htmlBotones += '</div>';
-            contHoras.innerHTML += htmlBotones;
-        };
-
-        window.abrirFormulario = (hora, fecha, dia) => {
-            window.datosCita = { 
-                hora: hora, 
-                fecha: fecha, 
-                dia: dia, 
-                doctor: window.medicoSeleccionado.Nombre 
-            };
-            
-            document.getElementById("resumen-cita-texto").innerText = 
-                `Dr. ${window.datosCita.doctor} - ${window.datosCita.dia} ${fecha.split('-').reverse().join('/')} a las ${hora}`;
-            
-            const form = document.getElementById("form-cita");
-            form.style.display = "block";
-            form.scrollIntoView({ behavior: 'smooth' });
-        };
-
-        document.getElementById("btn-confirmar").onclick = async () => {
-            const nombre = document.getElementById("nombre").value.trim();
-            const apellido = document.getElementById("apellido").value.trim();
-            const cedula = document.getElementById("cedula").value.trim();
-            const telefono = document.getElementById("telefono").value.trim();
-
-            if (!nombre || !apellido || !cedula || !telefono) {
-                alert("Por favor, rellene todos los campos del formulario.");
-                return;
-            }
-            
-            if (telefono.length < 10) {
-                alert("Por favor, introduzca un número de teléfono válido.");
-                return;
-            }
-
+        // Función para enviar la cita (Asegúrate de tener esta estructura)
+        window.confirmarCita = async () => {
             const data = {
-                nombre: nombre,
-                apellido: apellido,
-                cedula: cedula,
-                telefono: telefono,
-                ...window.datosCita,
+                nombre: document.getElementById("nombre").value,
+                doctor: window.datosCita.doctor,
+                dia: window.datosCita.dia,
+                hora: window.datosCita.hora,
+                fecha: document.getElementById("fecha").value, // <-- ESTO ES CLAVE
                 confirmado: false
             };
-
-            try {
-                await addDoc(collection(db, "citas"), data);
-                document.getElementById("form-cita").style.display = "none";
-                document.getElementById("modal-confirmacion").style.display = "flex";
-            } catch (err) {
-                console.error("Error al guardar la cita:", err);
-                alert("Ocurrió un error al procesar tu reserva. Inténtalo de nuevo.");
-            }
+            await addDoc(collection(db, "citas"), data);
+            alert("Cita guardada con fecha: " + data.fecha);
         };
-
-        document.addEventListener("DOMContentLoaded", inicializar);
     </script>
 </body>
 </html>
