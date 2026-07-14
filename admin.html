@@ -64,6 +64,12 @@
 
         let listaCitas = [];
 
+        // Función para formatear cédula XXX.XXX.XXX
+        const formatearCedula = (ced) => {
+            let s = ced.toString().replace(/\D/g, '');
+            return s.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3');
+        };
+
         window.validar = async () => {
             const u = document.getElementById("user").value;
             const p = document.getElementById("pass").value;
@@ -87,7 +93,7 @@
             data.forEach(c => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${c.nombre || ''}</td><td>${c.cedula || ''}</td><td>${c.telefono || ''}</td>
+                    <td>${c.nombre || ''}</td><td>${formatearCedula(c.cedula || '')}</td><td>${c.telefono || ''}</td>
                     <td>${c.doctor || ''} - ${c.hora || ''}</td><td>${c.fecha || ''}</td>
                     <td>${c.confirmado ? '<span class="badge-confirmado">Confirmado</span>' : 'Pendiente'}</td>
                     <td>
@@ -115,7 +121,7 @@
             tbody.innerHTML = "";
             snap.forEach(d => {
                 const c = d.data();
-                tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`;
+                tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${formatearCedula(c.cedula)}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`;
             });
         };
 
