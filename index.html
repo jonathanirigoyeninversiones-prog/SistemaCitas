@@ -1,11 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Sistema de Citas Médicas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Reservas Médicas</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; background: #f4f4f9; }
+        nav { display: flex; gap: 15px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .tab { cursor: pointer; padding: 10px 20px; background: #ddd; border-radius: 5px; font-weight: bold; }
+        .tab:hover { background: #bbb; }
+        .accordion { margin-bottom: 10px; background: white; border: 1px solid #ccc; border-radius: 5px; overflow: hidden; }
+        summary { padding: 15px; cursor: pointer; font-weight: bold; background: #eee; }
+        .slots { padding: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .slot-btn { padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <h1>Mis Médicos en Firebase</h1>
-    <ul id="lista-medicos"></ul>
+
+    <h1>Reservar Cita</h1>
+    <nav id="nav-especialidades"></nav>
+    <div id="contenedor-principal">Selecciona una especialidad arriba.</div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
@@ -17,28 +31,63 @@
             projectId: "sistemagestionnegocios-33fef",
             storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
             messagingSenderId: "1070762032731",
-            appId: "1:1070762032731:web:74ad150e739181c8d0897e",
-            measurementId: "G-7NC0YQ2XEG"
+            appId: "1:1070762032731:web:74ad150e739181c8d0897e"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getFirestore(initializeApp(firebaseConfig));
+        let datosMedicos = [];
 
-        async function cargarMedicos() {
-            const lista = document.getElementById("lista-medicos");
+        async function cargarDatos() {
             const querySnapshot = await getDocs(collection(db, "medicos"));
+            const especialidades = new Set();
             
             querySnapshot.forEach((doc) => {
-                const medico = doc.data();
-                // Aquí el código detecta si escribiste Nombre o nombre
-                const nombreDelMedico = medico.Nombre || medico.nombre || "Sin nombre";
-                const especialidadDelMedico = medico.especialidad || "Sin especialidad";
-                
-                lista.innerHTML += `<li>${nombreDelMedico} - ${especialidadDelMedico}</li>`;
+                const data = doc.data();
+                datosMedicos.push(data);
+                especialidades.add(data.especialidad);
+            });
+
+            renderizarTabs(Array.from(especialidades));
+        }
+
+        function renderizarTabs(listaEspecialidades) {
+            const nav = document.getElementById("nav-especialidades");
+            listaEspecialidades.forEach(esp => {
+                const btn = document.createElement("div");
+                btn.className = "tab";
+                btn.innerText = esp;
+                btn.onclick = () => filtrarPorEspecialidad(esp);
+                nav.appendChild(btn);
             });
         }
 
-        cargarMedicos();
+        function filtrarPorEspecialidad(especialidad) {
+            const contenedor = document.getElementById("contenedor-principal");
+            contenedor.innerHTML = `<h2>Médicos en ${especialidad}</h2>`;
+
+            const filtrados = datosMedicos.filter(m => m.especialidad === especialidad);
+            
+            filtrados.forEach(medico => {
+                const div = document.createElement("div");
+                div.innerHTML = `<h3>Dr. ${medico.Nombre || medico.nombre}</h3>`;
+                
+                // Crear acordeón de días
+                if (medico.horarios) {
+                    for (const [dia, horas] of Object.entries(medico.horarios)) {
+                        div.innerHTML += `
+                            <details class="accordion">
+                                <summary>${dia}</summary>
+                                <div class="slots">
+                                    ${horas.map(h => `<button class="slot-btn" onclick="alert('Cita reservada: ${h}')">${h}</button>`).join('')}
+                                </div>
+                            </details>`;
+                    }
+                }
+                contenedor.appendChild(div);
+            });
+        }
+
+        cargarDatos();
     </script>
 </body>
 </html>
