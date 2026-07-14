@@ -15,7 +15,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -27,19 +27,16 @@
         }));
 
         let medicos = [];
+        const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
         async function init() {
             const snap = await getDocs(collection(db, "medicos"));
             medicos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            
             const nav = document.getElementById("nav-especialidades");
             const especialidades = [...new Set(medicos.map(m => m.especialidad))];
-            
             especialidades.forEach(esp => {
-                const b = document.createElement("button");
-                b.className = "tab";
-                b.innerText = esp;
-                // ESTA ES LA FUNCIÓN QUE MOSTRABA LOS MÉDICOS
+                const b = document.createElement("div");
+                b.className = "tab"; b.innerText = esp;
                 b.onclick = () => mostrarMedicos(esp);
                 nav.appendChild(b);
             });
@@ -50,16 +47,29 @@
             cont.innerHTML = "<h3>Selecciona médico:</h3>";
             medicos.filter(m => m.especialidad === esp).forEach(m => {
                 const b = document.createElement("button");
-                b.className = "slot-btn";
-                b.innerText = "Dr. " + m.Nombre;
-                b.onclick = () => {
-                    // Aquí es donde continúa el flujo de la cita
-                    cont.innerHTML = `<h3>Dr. ${m.Nombre}</h3><input type="date" id="fecha">`;
-                };
+                b.className = "slot-btn"; b.innerText = "Dr. " + m.Nombre;
+                b.onclick = () => cont.innerHTML = `<h3>Dr. ${m.Nombre}</h3><input type="date" id="fecha" onchange="mostrarHoras('${m.id}')">`;
                 cont.appendChild(b);
             });
         };
 
+        window.mostrarHoras = (id) => {
+            const fecha = document.getElementById("fecha").value;
+            const medico = medicos.find(m => m.id === id);
+            const diaNombre = dias[new Date(fecha + 'T00:00:00').getDay()];
+            const horas = medico[diaNombre];
+            const cont = document.getElementById("seccion-seleccion");
+            cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3><input type="date" id="fecha" value="${fecha}" onchange="mostrarHoras('${id}')"><h4>${diaNombre}</h4>`;
+            horas?.forEach(h => {
+                const b = document.createElement("button");
+                b.className = "slot-btn"; b.innerText = h;
+                b.onclick = async () => {
+                    await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: "Paciente" });
+                    alert("Cita reservada para el " + fecha);
+                };
+                cont.appendChild(b);
+            });
+        };
         window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
