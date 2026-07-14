@@ -1,39 +1,33 @@
-<script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+window.mostrarHoras = (medicoId) => {
+    const fechaSeleccionada = document.getElementById("fecha-selector").value;
+    if (!fechaSeleccionada) return;
 
-        const db = getFirestore(initializeApp({
-            apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
-            authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
-            projectId: "sistemagestionnegocios-33fef",
-            storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
-            messagingSenderId: "1070762032731",
-            appId: "1:1070762032731:web:74ad150e739181c8d0897e"
-        }));
+    // Convertimos la fecha seleccionada al nombre del día (ej: "Lunes")
+    const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const fechaObj = new Date(fechaSeleccionada + 'T00:00:00'); // Forzamos zona horaria local
+    const nombreDia = dias[fechaObj.getDay()];
+    
+    const cont = document.getElementById("seccion-seleccion");
+    const medico = window.medicoSeleccionado;
+    const horasDisponibles = medico[nombreDia]; // Busca Lunes, Martes, etc.
 
-        let datosMedicos = [];
-        async function inicializar() {
-            try {
-                const medicosSnap = await getDocs(collection(db, "medicos"));
-                medicosSnap.forEach(d => {
-                    console.log("Cargando médico:", d.data()); // Verás esto en la consola F12
-                    datosMedicos.push({id: d.id, ...d.data()});
-                });
-                
-                const especialidades = Array.from(new Set(datosMedicos.map(m => m.especialidad)));
-                const nav = document.getElementById("nav-especialidades");
-                
-                especialidades.forEach(esp => {
-                    const btn = document.createElement("div");
-                    btn.className = "tab"; btn.innerText = esp;
-                    btn.onclick = () => mostrarMedicos(esp);
-                    nav.appendChild(btn);
-                });
-            } catch (error) {
-                console.error("Error al cargar Firebase:", error);
-                alert("Error al conectar con la base de datos. Revisa la consola (F12).");
-            }
-        }
-        // ... (resto de tus funciones mostrarMedicos, etc)
-        inicializar();
-    </script>
+    // Limpiamos la sección para mostrar solo lo nuevo
+    cont.innerHTML = `<h3>Fecha para ${medico.Nombre}</h3>
+    <input type="date" id="fecha-selector" value="${fechaSeleccionada}" onchange="mostrarHoras('${medico.id}')">`;
+
+    // LÓGICA DE VALIDACIÓN:
+    if (!horasDisponibles || horasDisponibles.length === 0) {
+        cont.innerHTML += `<div style="padding: 20px; background: #fee; border-radius: 8px; color: #d9534f;">
+            <strong>Día no disponible</strong>. Por favor selecciona otra fecha.
+        </div>`;
+    } else {
+        let html = `<h3>Horas para el ${nombreDia}</h3>`;
+        horasDisponibles.forEach(h => {
+            const ocupada = citasReservadas.find(c => c.doctor === medico.Nombre && c.fecha === fechaSeleccionada && c.hora === h);
+            html += ocupada 
+                ? `<button class="slot-btn" disabled>${h} (Ocupado)</button>`
+                : `<button class="slot-btn" onclick="abrirFormulario('${h}', '${fechaSeleccionada}')">${h}</button>`;
+        });
+        cont.innerHTML += html;
+    }
+};
