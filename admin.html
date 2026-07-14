@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <title>Panel de Administración</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
+        /* Ocultamos el cuerpo por defecto */
+        body { display: none; font-family: sans-serif; padding: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background-color: #333; color: white; padding: 10px; text-align: left; }
         td { border: 1px solid #ddd; padding: 10px; }
@@ -15,10 +16,8 @@
 </head>
 <body>
     <h1>Citas Pendientes</h1>
-    
     <input type="text" id="buscar" placeholder="Buscar..." onkeyup="filtrarTabla()">
     <button onclick="cargarCitas()">Refrescar Lista</button>
-
     <table>
         <thead>
             <tr>
@@ -45,12 +44,17 @@
             const user = prompt("Usuario:");
             const pass = prompt("Contraseña:");
             const snap = await getDocs(collection(db, "admin"));
-            if (!snap.docs.some(d => d.data().user === user && d.data().pass === pass)) {
-                alert("Acceso denegado");
-                window.location.href = "index.html";
-            } else {
+            
+            // Verificamos si existe algún documento con ese user y pass
+            const esValido = snap.docs.some(d => d.data().user === user && d.data().pass === pass);
+            
+            if (esValido) {
+                document.body.style.display = "block"; // Mostramos el contenido
                 cargarCitas();
                 setInterval(cargarCitas, 60000);
+            } else {
+                alert("Acceso denegado");
+                window.location.href = "index.html";
             }
         }
 
@@ -69,8 +73,8 @@
                     <td>${c.fecha || ''}</td>
                     <td class="${c.confirmado ? 'confirmado' : ''}">${c.confirmado ? 'Confirmado' : 'Pendiente'}</td>
                     <td>
-                        ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmarCita('${docSnap.id}')">Confirmar</button>` : ''}
-                        <button class="btn-cancel" onclick="cancelarCita('${docSnap.id}')">Cancelar</button>
+                        ${!c.confirmado ? `<button class="btn-confirm" onclick="window.confirmarCita('${docSnap.id}')">Confirmar</button>` : ''}
+                        <button class="btn-cancel" onclick="window.cancelarCita('${docSnap.id}')">Cancelar</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -97,7 +101,6 @@
             }
         };
 
-        window.cargarCitas = cargarCitas;
         window.addEventListener("DOMContentLoaded", verificarAcceso);
     </script>
 </body>
