@@ -7,9 +7,8 @@
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
         .slot-btn { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
+        .slot-btn:disabled { background: #ccc; cursor: not-allowed; }
         input { display: block; margin: 10px 0; padding: 8px; width: 250px; }
-        
-        /* Estilos del Modal */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 300px; text-align: center; }
     </style>
@@ -19,7 +18,6 @@
     <nav id="nav-especialidades"></nav>
     <div id="seccion-seleccion"></div>
 
-    <!-- Modal -->
     <div id="modalGracias" class="modal">
         <div class="modal-content">
             <h2>¡Gracias por Preferirnos!</h2>
@@ -30,7 +28,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -72,11 +70,16 @@
             });
         };
 
-        window.mostrarHoras = (id, fecha) => {
+        window.mostrarHoras = async (id, fecha) => {
             const medico = medicos.find(m => m.id === id);
             const diaNombre = dias[new Date(fecha + 'T00:00:00').getDay()];
             const horas = medico[diaNombre];
             const cont = document.getElementById("seccion-seleccion");
+            
+            // Obtener citas ya reservadas para este doctor y fecha
+            const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
+            const snap = await getDocs(q);
+            const ocupadas = snap.docs.map(d => d.data().hora);
             
             cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>
                               <input type="date" id="fecha-selector" value="${fecha}">
@@ -93,16 +96,13 @@
                 horas.forEach(h => {
                     const b = document.createElement("button");
                     b.className = "slot-btn"; b.innerText = h;
+                    if (ocupadas.includes(h)) b.disabled = true;
                     b.onclick = async () => {
                         const nombre = document.getElementById("nombre-paciente").value;
                         const cedula = document.getElementById("cedula-paciente").value;
                         const telefono = document.getElementById("telefono-paciente").value;
-                        
                         if(!nombre || !cedula || !telefono) return alert("Completa los datos");
-
-                        await addDoc(collection(db, "citas"), { 
-                            doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono 
-                        });
+                        await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
                         document.getElementById("modalGracias").style.display = "block";
                     };
                     cont.appendChild(b);
@@ -110,11 +110,7 @@
             }
         };
 
-        window.cerrarModal = () => {
-            document.getElementById("modalGracias").style.display = "none";
-            location.reload();
-        };
-
+        window.cerrarModal = () => { location.reload(); };
         window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
