@@ -30,8 +30,11 @@
             
             querySnapshot.forEach((doc) => {
                 const medico = doc.data();
-                // Fíjate aquí: estamos usando los nombres exactos que tienes en Firebase
-                lista.innerHTML += `<li>${medico.Nombre} - ${medico.especialidad}</li>`;
+                // Aquí el código detecta si escribiste Nombre o nombre
+                const nombreDelMedico = medico.Nombre || medico.nombre || "Sin nombre";
+                const especialidadDelMedico = medico.especialidad || "Sin especialidad";
+                
+                lista.innerHTML += `<li>${nombreDelMedico} - ${especialidadDelMedico}</li>`;
             });
         }
 
