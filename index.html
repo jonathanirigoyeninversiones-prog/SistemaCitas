@@ -23,10 +23,8 @@
         <h3>Completar Reserva</h3>
         <input type="text" id="nombre" placeholder="Nombres">
         <input type="text" id="apellido" placeholder="Apellidos">
-        <!-- Solo permite números en cédula -->
         <input type="number" id="cedula" placeholder="Cédula (Solo números)">
-        <!-- Input con patrón para teléfono venezolano (ej: 04121234567) -->
-        <input type="tel" id="telefono" placeholder="Teléfono (ej: 04121234567)" pattern="04[1246][0-9]{7}">
+        <input type="tel" id="telefono" placeholder="Teléfono (ej: 04121234567)">
         <button id="btn-confirmar" class="slot-btn">Confirmar Reserva</button>
     </div>
 
@@ -55,8 +53,9 @@
 
         async function inicializar() {
             const [medicosSnap, citasSnap] = await Promise.all([getDocs(collection(db, "medicos")), getDocs(collection(db, "citas"))]);
-            medicosSnap.forEach(d => datosMedicos.push(d.data()));
+            medicosSnap.forEach(d => datosMedicos.push({id: d.id, ...d.data()}));
             citasReservadas = citasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
             const especialidades = Array.from(new Set(datosMedicos.map(m => m.especialidad)));
             const nav = document.getElementById("nav-especialidades");
             especialidades.forEach(esp => {
@@ -70,15 +69,23 @@
         window.filtrar = (esp) => {
             const cont = document.getElementById("contenedor-principal");
             cont.innerHTML = `<h2>Médicos en ${esp}</h2>`;
+            const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
+            
             datosMedicos.filter(m => m.especialidad === esp).forEach(medico => {
                 const div = document.createElement("div");
                 div.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>`;
-                for (const [dia, horas] of Object.entries(medico.horarios)) {
-                    div.innerHTML += `<div><strong>${dia}:</strong> ` + horas.map(h => {
-                        const ocupada = citasReservadas.find(c => c.doctor === medico.Nombre && c.dia === dia && c.hora === h);
-                        return ocupada ? `<button class="slot-btn" disabled>${h}</button>` : `<button class="slot-btn" onclick="abrirFormulario('${h}', '${medico.Nombre}', '${dia}')">${h}</button>`;
-                    }).join(' ') + `</div><br>`;
-                }
+                
+                diasSemana.forEach(dia => {
+                    const horasArray = medico[dia]; 
+                    if (horasArray && Array.isArray(horasArray)) {
+                        div.innerHTML += `<div><strong>${dia}:</strong> ` + horasArray.map(h => {
+                            const ocupada = citasReservadas.find(c => c.doctor === medico.Nombre && c.dia === dia && c.hora === h);
+                            return ocupada 
+                                ? `<button class="slot-btn" disabled>${h}</button>` 
+                                : `<button class="slot-btn" onclick="abrirFormulario('${h}', '${medico.Nombre}', '${dia}')">${h}</button>`;
+                        }).join(' ') + `</div><br>`;
+                    }
+                });
                 cont.appendChild(div);
             });
         };
@@ -89,20 +96,15 @@
         };
 
         document.getElementById("btn-confirmar").onclick = async () => {
-            const nombre = document.getElementById("nombre").value;
-            const apellido = document.getElementById("apellido").value;
-            const cedula = document.getElementById("cedula").value;
-            const telefono = document.getElementById("telefono").value;
-
-            // Validación básica de teléfono venezolano (11 dígitos, comienza por 04)
-            if (!nombre || !cedula || telefono.length !== 11 || !telefono.startsWith("04")) {
-                alert("Por favor verifica los datos: La cédula debe ser solo números y el teléfono debe tener 11 dígitos (ej: 04121234567)");
-                return;
-            }
-
-            await addDoc(collection(db, "citas"), {
-                nombre, apellido, cedula, telefono, ...window.citaSeleccionada
-            });
+            const data = {
+                nombre: document.getElementById("nombre").value,
+                apellido: document.getElementById("apellido").value,
+                cedula: document.getElementById("cedula").value,
+                telefono: document.getElementById("telefono").value,
+                ...window.citaSeleccionada
+            };
+            if(!data.nombre || data.telefono.length < 11) return alert("Completa los datos correctamente");
+            await addDoc(collection(db, "citas"), data);
             document.getElementById("modal-confirmacion").style.display = "flex";
             document.getElementById("form-cita").style.display = "none";
         };
