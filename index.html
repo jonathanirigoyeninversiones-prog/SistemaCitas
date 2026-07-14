@@ -1,23 +1,45 @@
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sistema de Citas Médicas</title>
+</head>
+<body>
+    <h1>Mis Médicos en Firebase</h1>
+    <ul id="lista-medicos"></ul>
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
-    authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
-    projectId: "sistemagestionnegocios-33fef",
-    storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
-    messagingSenderId: "1070762032731",
-    appId: "1:1070762032731:web:74ad150e739181c8d0897e",
-    measurementId: "G-7NC0YQ2XEG"
-  };
+    <script type="module">
+        // Importa las funciones necesarias desde Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
+        // Tu configuración
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
+            authDomain: "sistemagestionnegocios-33fef.firebaseapp.com",
+            projectId: "sistemagestionnegocios-33fef",
+            storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app",
+            messagingSenderId: "1070762032731",
+            appId: "1:1070762032731:web:74ad150e739181c8d0897e",
+            measurementId: "G-7NC0YQ2XEG"
+        };
+
+        // Inicializar Firebase y Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Función para leer los médicos
+        async function cargarMedicos() {
+            const lista = document.getElementById("lista-medicos");
+            const querySnapshot = await getDocs(collection(db, "medicos"));
+            
+            querySnapshot.forEach((doc) => {
+                const medico = doc.data();
+                lista.innerHTML += `<li>${medico.nombre} - ${medico.especialidad}</li>`;
+            });
+        }
+
+        // Llamar a la función
+        cargarMedicos();
+    </script>
+</body>
+</html>
