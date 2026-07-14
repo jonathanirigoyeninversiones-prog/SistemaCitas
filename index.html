@@ -2,45 +2,58 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>XXPanel de Administración</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
-        .slot-btn { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
-        .slot-btn:disabled { background: #ccc; cursor: not-allowed; }
-        input { display: block; margin: 10px 0; padding: 8px; width: 250px; }
-        
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
-        .modal-content { background-color: white; margin: 15% auto; padding: 30px; border-radius: 15px; width: 80%; max-width: 350px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .btn-modal { padding: 10px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; }
-        .btn-success { background-color: #28a745; color: white; }
-        .btn-error { background-color: #dc3545; color: white; }
+        body { font-family: sans-serif; padding: 20px; }
+        #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
+        #admin-content, #historial-content { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #333; color: white; padding: 10px; cursor: pointer; }
+        td { border: 1px solid #ddd; padding: 10px; }
+        .btn-confirm { background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .btn-cumplido { background-color: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .btn-refresh { background-color: #6c757d; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-left: 10px; }
+        .badge-confirmado { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        #buscador { margin-bottom: 15px; padding: 10px; width: 300px; }
     </style>
 </head>
 <body>
-    <h1>🏥 Reserva tu Cita</h1>
-    <nav id="nav-especialidades"></nav>
-    <div id="seccion-seleccion"></div>
 
-    <div id="modalGracias" class="modal">
-        <div class="modal-content">
-            <h2>¡Cita Reservada!</h2>
-            <p>Nuestro equipo se pondrá en contacto pronto.</p>
-            <button class="btn-modal btn-success" onclick="document.getElementById('modalGracias').style.display='none'">Aceptar</button>
-        </div>
+    <div id="login-layer">
+        <h2>Acceso Administrador</h2>
+        <input type="text" id="user" placeholder="Usuario"><br><br>
+        <input type="password" id="pass" placeholder="Clave"><br><br>
+        <button onclick="validar()">Ingresar</button>
     </div>
 
-    <div id="modalNoDisponible" class="modal">
-        <div class="modal-content">
-            <h2 style="color: #dc3545;">Fecha no válida</h2>
-            <p id="msgError">El profesional no labora en esta fecha o la fecha ya pasó.</p>
-            <button class="btn-modal btn-error" onclick="document.getElementById('modalNoDisponible').style.display='none'">Aceptar</button>
-        </div>
+    <div id="admin-content">
+        <h1>Citas Pendientes</h1>
+        <button onclick="mostrarHistorial()">Ver Historial</button>
+        <button class="btn-refresh" onclick="cargarCitas()">Refrescar</button>
+        <input type="text" id="buscador" placeholder="Filtrar..." onkeyup="filtrarTabla()">
+        <table>
+            <thead>
+                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th onclick="alternarOrden()">Fecha ↕</th><th>Estado</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="lista-citas"></tbody>
+        </table>
+    </div>
+
+    <div id="historial-content">
+        <h1>Historial de Citas Cumplidas</h1>
+        <button onclick="volverPendientes()">Volver a Pendientes</button>
+        <table>
+            <thead>
+                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Fecha</th></tr>
+            </thead>
+            <tbody id="lista-historial"></tbody>
+        </table>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE",
@@ -51,107 +64,97 @@
             appId: "1:1070762032731:web:74ad150e739181c8d0897e"
         }));
 
-        let medicos = [];
-        const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+        let listaCitas = [];
+        let ordenAscendente = true; // Por defecto más cercano a más lejano
 
-        async function init() {
-            const snap = await getDocs(collection(db, "medicos"));
-            medicos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            const nav = document.getElementById("nav-especialidades");
-            const especialidades = [...new Set(medicos.map(m => m.especialidad))];
-            especialidades.forEach(esp => {
-                const b = document.createElement("button");
-                b.className = "tab"; b.innerText = esp;
-                b.onclick = () => mostrarMedicos(esp);
-                nav.appendChild(b);
+        const formatearCedula = (ced) => {
+            let s = ced.toString().replace(/\D/g, '');
+            return s.replace(/(\d{1,3})(\d{3})(\d{3})/, '$1.$2.$3');
+        };
+
+        const formatearFecha = (f) => {
+            if (!f || !f.includes('-')) return f;
+            const partes = f.split('-');
+            if (partes[0].length === 4) return `${partes[2]}-${partes[1]}-${partes[0]}`;
+            return f;
+        };
+
+        window.alternarOrden = () => {
+            ordenAscendente = !ordenAscendente;
+            renderizarTabla(listaCitas);
+        };
+
+        window.validar = async () => {
+            const u = document.getElementById("user").value;
+            const p = document.getElementById("pass").value;
+            const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
+            if (docSnap.exists() && docSnap.data().usuario === u && docSnap.data().clave === p) {
+                document.getElementById("login-layer").style.display = "none";
+                document.getElementById("admin-content").style.display = "block";
+                cargarCitas();
+                setInterval(cargarCitas, 60000); 
+            } else { alert("Credenciales incorrectas"); }
+        };
+
+        window.cargarCitas = async () => {
+            const snap = await getDocs(collection(db, "citas"));
+            listaCitas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarTabla(listaCitas);
+        };
+
+        function renderizarTabla(data) {
+            const tbody = document.getElementById("lista-citas");
+            tbody.innerHTML = "";
+            
+            // Ordenamiento por fecha
+            const dataOrdenada = [...data].sort((a, b) => {
+                const fechaA = new Date(a.fecha);
+                const fechaB = new Date(b.fecha);
+                return ordenAscendente ? fechaA - fechaB : fechaB - fechaA;
+            });
+
+            dataOrdenada.forEach(c => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${c.nombre || ''}</td><td>${formatearCedula(c.cedula || '')}</td><td>${c.telefono || ''}</td>
+                    <td>${c.doctor || ''} - ${c.hora || ''}</td><td>${formatearFecha(c.fecha || '')}</td>
+                    <td>${c.confirmado ? '<span class="badge-confirmado">Confirmado</span>' : 'Pendiente'}</td>
+                    <td>
+                        ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmar('${c.id}')">Confirmar</button>` : ''}
+                        <button class="btn-cumplido" onclick="marcarCumplido('${c.id}')">Cumplido</button>
+                        <button class="btn-cancel" onclick="cancelar('${c.id}')">Cancelar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        window.mostrarMedicos = (esp) => {
-            const cont = document.getElementById("seccion-seleccion");
-            cont.innerHTML = "<h3>Selecciona médico:</h3>";
-            medicos.filter(m => m.especialidad === esp).forEach(m => {
-                const b = document.createElement("button");
-                b.className = "slot-btn"; b.innerText = "Dr. " + m.Nombre;
-                b.onclick = () => {
-                    const hoy = new Date().toISOString().split('T')[0];
-                    cont.innerHTML = `<h3>Dr. ${m.Nombre}</h3><input type="date" id="fecha-selector" min="${hoy}">`;
-                    document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(m.id, e.target.value);
-                };
-                cont.appendChild(b);
+        window.marcarCumplido = async (id) => {
+            const cita = listaCitas.find(c => c.id === id);
+            await addDoc(collection(db, "historial_citas"), { ...cita, fechaCumplido: new Date().toISOString() });
+            await deleteDoc(doc(db, "citas", id));
+            cargarCitas();
+        };
+
+        window.mostrarHistorial = async () => {
+            document.getElementById("admin-content").style.display = "none";
+            document.getElementById("historial-content").style.display = "block";
+            const snap = await getDocs(collection(db, "historial_citas"));
+            const tbody = document.getElementById("lista-historial");
+            tbody.innerHTML = "";
+            snap.forEach(d => {
+                const c = d.data();
+                tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${formatearCedula(c.cedula || '')}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${formatearFecha(c.fecha || '')}</td></tr>`;
             });
         };
 
-        window.mostrarHoras = async (id, fecha) => {
-            const ahora = new Date();
-            const hoyStr = ahora.toISOString().split('T')[0];
-            
-            if (fecha < hoyStr) {
-                document.getElementById("msgError").innerText = "No puedes seleccionar fechas pasadas.";
-                document.getElementById("modalNoDisponible").style.display = "block";
-                return;
-            }
-
-            const medico = medicos.find(m => m.id === id);
-            const d = new Date(fecha + 'T00:00:00');
-            const diaNombre = dias[d.getDay()];
-            const horas = medico[diaNombre];
-
-            if (!horas || horas.length === 0) {
-                document.getElementById("msgError").innerText = "El profesional no labora este día.";
-                document.getElementById("modalNoDisponible").style.display = "block";
-                return;
-            }
-
-            const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
-            const snap = await getDocs(q);
-            const ocupadas = snap.docs.map(d => d.data().hora);
-            
-            const cont = document.getElementById("seccion-seleccion");
-            cont.innerHTML = `<h3>Dr. ${medico.Nombre}</h3>
-                              <input type="date" id="fecha-selector" value="${fecha}">
-                              <input type="text" id="nombre-paciente" placeholder="Nombre y Apellido" required>
-                              <input type="text" id="cedula-paciente" placeholder="Cédula (Máx 8 números, no inicia en 0)" required>
-                              <input type="tel" id="telefono-paciente" placeholder="Teléfono (Ej: 04141234567)" required>
-                              <h4>${diaNombre}</h4>`;
-            
-            document.getElementById("fecha-selector").onchange = (e) => mostrarHoras(id, e.target.value);
-            
-            horas.forEach(h => {
-                const b = document.createElement("button");
-                b.className = "slot-btn"; b.innerText = h;
-                
-                // Lógica de deshabilitar: si es hoy y la hora ya pasó
-                if (ocupadas.includes(h)) b.disabled = true;
-                if (fecha === hoyStr) {
-                    const horaTurno = parseInt(h.split(':')[0]);
-                    if (ahora.getHours() >= horaTurno) b.disabled = true;
-                }
-
-                b.onclick = async () => {
-                    const nombre = document.getElementById("nombre-paciente").value;
-                    const cedula = document.getElementById("cedula-paciente").value;
-                    const telefono = document.getElementById("telefono-paciente").value.trim();
-                    
-                    const regexCedula = /^[1-9]\d{0,7}$/;
-                    const regexTel = /^\d{11}$/; // Valida que sean exactamente 11 números
-
-                    if(!regexCedula.test(cedula)) return alert("Cédula inválida: Solo números (máximo 8) y no debe comenzar con 0.");
-                    if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe contener exactamente 11 dígitos.");
-
-                    await addDoc(collection(db, "citas"), { doctor: medico.Nombre, dia: diaNombre, fecha: fecha, hora: h, nombre: nombre, cedula: cedula, telefono: telefono });
-                    
-                    document.getElementById("nombre-paciente").value = "";
-                    document.getElementById("cedula-paciente").value = "";
-                    document.getElementById("telefono-paciente").value = "";
-                    
-                    document.getElementById("modalGracias").style.display = "block";
-                };
-                cont.appendChild(b);
-            });
+        window.volverPendientes = () => {
+            document.getElementById("admin-content").style.display = "block";
+            document.getElementById("historial-content").style.display = "none";
         };
 
-        window.addEventListener("DOMContentLoaded", init);
+        window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { confirmado: true }); cargarCitas(); };
+        window.cancelar = async (id) => { if(confirm("¿Eliminar cita?")) { await deleteDoc(db, "citas", id)); cargarCitas(); } };
     </script>
 </body>
 </html>
