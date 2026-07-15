@@ -2,10 +2,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Reserva de Citas</title>
+    <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
-        #bcv-container { position: absolute; top: 10px; right: 10px; background: #fff; padding: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ccc; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
         .slot-btn { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; border-radius: 5px; }
         .slot-btn:disabled { background: #ccc; cursor: not-allowed; }
@@ -17,8 +16,6 @@
     </style>
 </head>
 <body>
-    <div id="bcv-container">Precio $ BCV: <span id="precio-bcv">Cargando...</span></div>
-    
     <h1>🏥 Reserva tu Cita</h1>
     <nav id="nav-especialidades"></nav>
     <div id="seccion-seleccion"></div>
@@ -45,19 +42,6 @@
 
         let medicos = [];
         const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-        async function obtenerPrecioBCV() {
-            try {
-                // API consultada para obtener tasa oficial BCV
-                const response = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=bcv');
-                const data = await response.json();
-                const tasa = data.monitors.bcv.price;
-                document.getElementById('precio-bcv').innerText = "Bs. " + tasa.toFixed(2);
-            } catch (error) {
-                console.error("Error al obtener BCV:", error);
-                document.getElementById('precio-bcv').innerText = "Error de conexión";
-            }
-        }
 
         async function init() {
             const snap = await getDocs(collection(db, "medicos"));
@@ -106,11 +90,13 @@
             const medico = medicos.find(m => m.id === id);
             const diaNombre = diasSemana[new Date(fecha + 'T00:00:00').getDay()];
             const horas = medico[diaNombre];
+            const precio = medico.precio || "Consultar"; // Se asume campo 'precio' en Firestore[cite: 3]
             const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
             const snap = await getDocs(q);
             const ocupadas = snap.docs.map(d => d.data().hora);
             const cont = document.getElementById("seccion-seleccion");
             cont.innerHTML = `<h3>Dr. ${medico.Nombre} - ${diaNombre} ${fecha}</h3>
+                              <p>Precio de consulta: <strong>$${precio}</strong></p>
                               <input type="text" id="nombre-paciente" placeholder="Nombre" required>
                               <input type="text" id="cedula-paciente" placeholder="Cédula" required>
                               <input type="tel" id="telefono-paciente" placeholder="Teléfono" required>`;
@@ -133,9 +119,6 @@
 
         window.addEventListener("DOMContentLoaded", () => {
             init();
-            obtenerPrecioBCV();
-            // Actualización automática cada hora (3600000 ms)
-            setInterval(obtenerPrecioBCV, 3600000);
         });
     </script>
 </body>
