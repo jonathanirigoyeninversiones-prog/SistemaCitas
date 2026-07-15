@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Administración</title>
+    <title>P111  anel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -47,7 +47,8 @@
         
         <div class="filtros-historial">
             <select id="filtro-doctor" onchange="mostrarHistorial()">
-                <option value="todos">TODOS</option>
+                <option value="todos">TODOS (Lista completa)</option>
+                <option value="resumen">RESUMEN POR MÉDICO (Cantidad)</option>
                 <option value="Juan Perez">Dr. Juan Perez</option>
                 <option value="pedro el escamoso">Pedro el escamoso</option>
             </select>
@@ -56,9 +57,9 @@
             <span id="contador-citas" style="margin-left: 20px; font-weight: bold;"></span>
         </div>
 
-        <table>
+        <table id="tabla-historial">
             <thead>
-                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th></tr>
+                <tr id="encabezado-tabla"></tr>
             </thead>
             <tbody id="lista-historial"></tbody>
         </table>
@@ -92,16 +93,8 @@
             return f;
         };
 
-        window.alternarOrden = () => {
-            ordenAscendente = !ordenAscendente;
-            renderizarTabla(listaCitas);
-        };
-
-        window.filtrarTabla = () => {
-            const busqueda = document.getElementById("buscador").value.toLowerCase();
-            const filtrados = listaCitas.filter(c => (c.cedula || '').toString().toLowerCase().includes(busqueda));
-            renderizarTabla(filtrados);
-        };
+        window.alternarOrden = () => { ordenAscendente = !ordenAscendente; renderizarTabla(listaCitas); };
+        window.filtrarTabla = () => { renderizarTabla(listaCitas.filter(c => (c.cedula || '').toString().toLowerCase().includes(document.getElementById("buscador").value.toLowerCase()))); };
 
         window.validar = async () => {
             const u = document.getElementById("user").value.trim();
@@ -140,37 +133,41 @@
         window.mostrarHistorial = async () => {
             document.getElementById("admin-content").style.display = "none";
             document.getElementById("historial-content").style.display = "block";
-            
-            const filtroDoctor = document.getElementById("filtro-doctor").value;
+            const filtro = document.getElementById("filtro-doctor").value;
             const fInicio = document.getElementById("fecha-inicio").value;
             const fFin = document.getElementById("fecha-fin").value;
-            
             const snap = await getDocs(collection(db, "historial_citas"));
             const tbody = document.getElementById("lista-historial");
+            const header = document.getElementById("encabezado-tabla");
             tbody.innerHTML = "";
             let contador = 0;
 
-            snap.forEach(d => {
-                const c = d.data();
-                const doctorBase = (c.doctor || '').replace("Dr. ", "");
-                const fechaCita = c.fecha;
-                
-                const cumpleDoctor = (filtroDoctor === "todos" || doctorBase === filtroDoctor);
-                const cumpleFecha = (!fInicio || fechaCita >= fInicio) && (!fFin || fechaCita <= fFin);
-
-                if (cumpleDoctor && cumpleFecha) {
-                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${formatearCedula(c.cedula||'')}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${formatearFecha(c.fecha||'')}</td></tr>`;
-                    contador++;
-                }
-            });
-            document.getElementById("contador-citas").innerText = `Total: ${contador} citas`;
+            if (filtro === "resumen") {
+                header.innerHTML = "<th>Médico</th><th>Pacientes Atendidos</th>";
+                const resumen = {};
+                snap.forEach(d => {
+                    const c = d.data();
+                    if((!fInicio || c.fecha >= fInicio) && (!fFin || c.fecha <= fFin)) {
+                        resumen[c.doctor] = (resumen[c.doctor] || 0) + 1;
+                        contador++;
+                    }
+                });
+                for (let docName in resumen) { tbody.innerHTML += `<tr><td>${docName}</td><td>${resumen[docName]}</td></tr>`; }
+            } else {
+                header.innerHTML = "<th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th>";
+                snap.forEach(d => {
+                    const c = d.data();
+                    const docBase = (c.doctor || '').replace("Dr. ", "");
+                    if ((filtro === "todos" || docBase === filtro) && (!fInicio || c.fecha >= fInicio) && (!fFin || c.fecha <= fFin)) {
+                        tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${formatearCedula(c.cedula||'')}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${formatearFecha(c.fecha||'')}</td></tr>`;
+                        contador++;
+                    }
+                });
+            }
+            document.getElementById("contador-citas").innerText = `Total: ${contador} registros`;
         };
 
-        window.volverPendientes = () => {
-            document.getElementById("admin-content").style.display = "block";
-            document.getElementById("historial-content").style.display = "none";
-        };
-
+        window.volverPendientes = () => { document.getElementById("admin-content").style.display = "block"; document.getElementById("historial-content").style.display = "none"; };
         window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { confirmado: true }); cargarCitas(); };
         window.cancelar = async (id) => { if(confirm("¿Eliminar cita?")) { await deleteDoc(doc(db, "citas", id)); cargarCitas(); } };
     </script>
