@@ -76,7 +76,6 @@
                 const fechaFormateada = c.fecha ? c.fecha.split('-').reverse().join('-') : 'N/A';
                 const esConfirmado = c.estado === "Confirmado";
                 const tr = document.createElement("tr");
-                tr.setAttribute("data-cedula", c.cedula);
                 tr.innerHTML = `<td>${c.nombre}</td><td>${cedulaFormateada}</td><td>${c.telefono}</td><td>${c.doctor}</td>
                                 <td>${fechaFormateada}</td>
                                 <td>${c.hora || 'N/A'}</td>
@@ -93,9 +92,9 @@
         window.ordenarPorFecha = () => {
             ordenAsc = !ordenAsc;
             datosCitas.sort((a, b) => {
-                const fechaHoraA = new Date(`${a.fecha}T${a.hora || '00:00'}`);
-                const fechaHoraB = new Date(`${b.fecha}T${b.hora || '00:00'}`);
-                return ordenAsc ? fechaHoraA - fechaHoraB : fechaHoraB - fechaHoraA;
+                const fA = new Date(`${a.fecha}T${a.hora || '00:00'}`);
+                const fB = new Date(`${b.fecha}T${b.hora || '00:00'}`);
+                return ordenAsc ? fA - fB : fB - fA;
             });
             renderizarTabla(datosCitas);
         };
@@ -120,7 +119,7 @@
         window.filtrar = () => {
             const val = document.getElementById("filtro").value;
             document.querySelectorAll("#lista-citas tr").forEach(tr => {
-                tr.style.display = tr.getAttribute("data-cedula").includes(val) ? "" : "none";
+                tr.style.display = tr.innerText.includes(val) ? "" : "none";
             });
         };
     </script>
