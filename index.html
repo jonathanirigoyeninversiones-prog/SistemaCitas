@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>1111 Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
@@ -103,6 +103,7 @@
                 return;
             }
 
+            // Consulta de citas ya ocupadas
             const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
             const snap = await getDocs(q);
             const ocupadas = snap.docs.map(d => d.data().hora);
@@ -121,9 +122,9 @@
                 const b = document.createElement("button");
                 b.className = "slot-btn"; b.innerText = h;
                 
-                // Lógica de deshabilitar: si es hoy y la hora ya pasó
+                // Deshabilitar si está ocupado, o si es hoy y ya pasó la hora
                 if (ocupadas.includes(h)) b.disabled = true;
-                if (fecha === hoyStr) {
+                else if (fecha === hoyStr) {
                     const horaTurno = parseInt(h.split(':')[0]);
                     if (ahora.getHours() >= horaTurno) b.disabled = true;
                 }
@@ -134,7 +135,7 @@
                     const telefono = document.getElementById("telefono-paciente").value.trim();
                     
                     const regexCedula = /^[1-9]\d{0,7}$/;
-                    const regexTel = /^\d{11}$/; // Valida que sean exactamente 11 números
+                    const regexTel = /^\d{11}$/;
 
                     if(!regexCedula.test(cedula)) return alert("Cédula inválida: Solo números (máximo 8) y no debe comenzar con 0.");
                     if(!regexTel.test(telefono)) return alert("Teléfono inválido: Debe contener exactamente 11 dígitos.");
@@ -144,8 +145,9 @@
                     document.getElementById("nombre-paciente").value = "";
                     document.getElementById("cedula-paciente").value = "";
                     document.getElementById("telefono-paciente").value = "";
-                    
                     document.getElementById("modalGracias").style.display = "block";
+                    // Recargar las horas para actualizar el botón recién presionado
+                    mostrarHoras(id, fecha);
                 };
                 cont.appendChild(b);
             });
