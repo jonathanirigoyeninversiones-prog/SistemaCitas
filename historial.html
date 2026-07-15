@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Historial Médico Avanzado</title>
+    <title>Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -79,14 +79,12 @@
                     tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.doctor}</td><td>$${precioUSD}</td><td>${cadenaPrecio}</td><td>${pagoMedico} Bs</td></tr>`;
                 });
             } else {
-                // Títulos actualizados
                 thead.innerHTML = "<tr><th>Doctor</th><th>Total Citas</th><th>Comisión (%)</th><th>Total Pago Médico (Bs)</th></tr>";
                 medicos.forEach(m => {
                     const citas = historialCompleto.filter(c => c.doctor === m.Nombre);
                     const totalBs = citas.reduce((acc, c) => acc + (parseFloat((c.precioBs || "0").toString().replace(' Bs', '').replace('.', '').replace(',', '.')) || 0), 0);
                     const porcentaje = m.porcentaje || 60;
                     const totalPago = (totalBs * (porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
-                    // Filas actualizadas con el porcentaje
                     tbody.innerHTML += `<tr><td>${m.Nombre}</td><td>${citas.length}</td><td>${porcentaje}%</td><td>${totalPago} Bs</td></tr>`;
                 });
             }
