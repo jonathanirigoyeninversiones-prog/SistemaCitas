@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Recepción</title>
+    <title>111 Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -32,10 +32,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-        const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
-        const auth = getAuth();
+        const app = initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" });
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
         window.login = async () => {
             try {
@@ -43,7 +44,7 @@
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
                 cargarCitas();
-                setInterval(cargarCitas, 60000); // Actualizar cada minuto
+                setInterval(cargarCitas, 60000);
             } catch (e) { alert("Error: " + e.message); }
         };
 
@@ -57,7 +58,7 @@
                 tr.setAttribute("data-cedula", c.cedula);
                 tr.innerHTML = `<td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td>
                 <td>
-                    <button class="btn" style="background:green; color:white;" onclick="cambiarEstado('${d.id}', 'Confirmado', this)">Confirmar</button>
+                    <button class="btn" style="background:green; color:white;" onclick="cambiarEstado(this)">Confirmado</button>
                     <button class="btn" onclick="cumplirCita('${d.id}')">Cumplido</button>
                     <button class="btn" onclick="cancelarCita('${d.id}')">Cancelar</button>
                 </td>`;
@@ -65,18 +66,16 @@
             });
         };
 
-        window.cambiarEstado = (id, estado, btn) => {
-            btn.parentElement.parentElement.style.backgroundColor = "#d4edda";
-            btn.innerText = "Confirmado";
+        window.cambiarEstado = (btn) => {
+            btn.parentElement.parentElement.style.backgroundColor = "green";
+            btn.parentElement.parentElement.style.color = "white";
         };
 
         window.cumplirCita = async (id) => {
-            const docRef = doc(db, "citas", id);
-            const snap = await getDocs(collection(db, "citas")); // Solo para obtener datos actuales
-            // Aquí deberías buscar el documento específico por ID para extraer sus datos
-            const data = (await getDocs(collection(db, "citas"))).docs.find(d => d.id === id).data();
-            await addDoc(collection(db, "historial_citas"), data);
-            await deleteDoc(docRef);
+            const snap = await getDocs(collection(db, "citas"));
+            const docData = snap.docs.find(d => d.id === id).data();
+            await addDoc(collection(db, "historial_citas"), docData);
+            await deleteDoc(doc(db, "citas", id));
             cargarCitas();
         };
 
