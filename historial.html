@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Historial Médico Avanzado</title>
+    <title>111 Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -22,7 +22,7 @@
 
     <div id="historial-content" style="display:none;">
         <div id="config-porcentajes">
-            <h4>% Pago Médico</h4>
+            <h4>% Pago Médico (Editar y perder foco)</h4>
             <div id="lista-medicos-config"></div>
         </div>
         <h1>Reportes de Citas</h1>
@@ -45,7 +45,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         let historialCompleto = [];
@@ -65,11 +65,17 @@
             } catch (e) { alert("Error: " + e.message); }
         };
 
+        window.actualizarPorcentaje = async (id, valor) => {
+            await updateDoc(doc(db, "medicos", id), { porcentaje: parseFloat(valor) });
+            medicos.find(m => m.id === id).porcentaje = parseFloat(valor);
+            generarReporte();
+        };
+
         function renderizarConfig() {
             const div = document.getElementById("lista-medicos-config");
             div.innerHTML = "";
-            medicos.forEach((m, idx) => {
-                div.innerHTML += `<div>${m.Nombre}: ${m.porcentaje}%</div>`;
+            medicos.forEach(m => {
+                div.innerHTML += `<div>${m.Nombre}: <input type="number" value="${m.porcentaje}" style="width:40px" onchange="actualizarPorcentaje('${m.id}', this.value)">%</div>`;
             });
         }
 
