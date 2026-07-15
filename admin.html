@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Administración</title>
+    <title>111 Panel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -56,9 +56,9 @@
             <span id="contador-citas" style="margin-left: 20px; font-weight: bold;"></span>
         </div>
 
-        <table>
+        <table id="tabla-historial">
             <thead>
-                <tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th></tr>
+                <tr id="encabezado-tabla"></tr>
             </thead>
             <tbody id="lista-historial"></tbody>
         </table>
@@ -99,9 +99,7 @@
 
         window.filtrarTabla = () => {
             const busqueda = document.getElementById("buscador").value.toLowerCase();
-            const filtrados = listaCitas.filter(c => 
-                (c.cedula || '').toString().toLowerCase().includes(busqueda)
-            );
+            const filtrados = listaCitas.filter(c => (c.cedula || '').toString().toLowerCase().includes(busqueda));
             renderizarTabla(filtrados);
         };
 
@@ -109,16 +107,11 @@
             const u = document.getElementById("user").value.trim();
             const p = document.getElementById("pass").value.trim();
             const docSnap = await getDoc(doc(db, "configuracion", "credenciales_admin"));
-            
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.usuario.toString().trim() === u && data.clave.toString().trim() === p) {
-                    document.getElementById("login-layer").style.display = "none";
-                    document.getElementById("admin-content").style.display = "block";
-                    cargarCitas();
-                    setInterval(cargarCitas, 60000); 
-                } else { alert("Credenciales incorrectas"); }
-            } else { alert("Error de configuración"); }
+            if (docSnap.exists() && docSnap.data().usuario.toString().trim() === u && docSnap.data().clave.toString().trim() === p) {
+                document.getElementById("login-layer").style.display = "none";
+                document.getElementById("admin-content").style.display = "block";
+                cargarCitas();
+            } else { alert("Credenciales incorrectas"); }
         };
 
         window.cargarCitas = async () => {
@@ -130,23 +123,9 @@
         function renderizarTabla(data) {
             const tbody = document.getElementById("lista-citas");
             tbody.innerHTML = "";
-            const dataOrdenada = [...data].sort((a, b) => {
-                const fechaA = new Date(a.fecha);
-                const fechaB = new Date(b.fecha);
-                return ordenAscendente ? fechaA - fechaB : fechaB - fechaA;
-            });
-            dataOrdenada.forEach(c => {
+            [...data].sort((a,b) => ordenAscendente ? new Date(a.fecha)-new Date(b.fecha) : new Date(b.fecha)-new Date(a.fecha)).forEach(c => {
                 const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${c.nombre || ''}</td><td>${formatearCedula(c.cedula || '')}</td><td>${c.telefono || ''}</td>
-                    <td>${c.doctor || ''} - ${c.hora || ''}</td><td>${formatearFecha(c.fecha || '')}</td>
-                    <td>${c.confirmado ? '<span class="badge-confirmado">Confirmado</span>' : 'Pendiente'}</td>
-                    <td>
-                        ${!c.confirmado ? `<button class="btn-confirm" onclick="confirmar('${c.id}')">Confirmar</button>` : ''}
-                        <button class="btn-cumplido" onclick="marcarCumplido('${c.id}')">Cumplido</button>
-                        <button class="btn-cancel" onclick="cancelar('${c.id}')">Cancelar</button>
-                    </td>
-                `;
+                tr.innerHTML = `<td>${c.nombre||''}</td><td>${formatearCedula(c.cedula||'')}</td><td>${c.telefono||''}</td><td>${c.doctor||''} - ${c.hora||''}</td><td>${formatearFecha(c.fecha||'')}</td><td>${c.confirmado?'<span class="badge-confirmado">Confirmado</span>':'Pendiente'}</td><td>${!c.confirmado?`<button class="btn-confirm" onclick="confirmar('${c.id}')">Confirmar</button>`:''}<button class="btn-cumplido" onclick="marcarCumplido('${c.id}')">Cumplido</button><button class="btn-cancel" onclick="cancelar('${c.id}')">Cancelar</button></td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -168,26 +147,36 @@
             
             const snap = await getDocs(collection(db, "historial_citas"));
             const tbody = document.getElementById("lista-historial");
+            const header = document.getElementById("encabezado-tabla");
             tbody.innerHTML = "";
             let contador = 0;
 
-            snap.forEach(d => {
-                const c = d.data();
-                const fechaCita = c.fecha;
-                
-                // Normalizamos el nombre del doctor en la base de datos eliminando "Dr. " para comparar
-                const doctorBase = (c.doctor || '').replace("Dr. ", "");
-                
-                let cumpleDoctor = (filtroDoctor === "todos" || doctorBase === filtroDoctor);
-                let cumpleFecha = true;
-                if(fInicio) cumpleFecha = cumpleFecha && (fechaCita >= fInicio);
-                if(fFin) cumpleFecha = cumpleFecha && (fechaCita <= fFin);
-
-                if (cumpleDoctor && cumpleFecha) {
-                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${formatearCedula(c.cedula || '')}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${formatearFecha(c.fecha || '')}</td></tr>`;
-                    contador++;
+            if (filtroDoctor === "todos") {
+                header.innerHTML = "<th>Médico</th><th>Consultas Realizadas</th>";
+                const resumen = {};
+                snap.forEach(d => {
+                    const c = d.data();
+                    const fechaCita = c.fecha;
+                    if((!fInicio || fechaCita >= fInicio) && (!fFin || fechaCita <= fFin)) {
+                        const nombreDoc = c.doctor || "Desconocido";
+                        resumen[nombreDoc] = (resumen[nombreDoc] || 0) + 1;
+                        contador++;
+                    }
+                });
+                for (let docName in resumen) {
+                    tbody.innerHTML += `<tr><td>${docName}</td><td>${resumen[docName]}</td></tr>`;
                 }
-            });
+            } else {
+                header.innerHTML = "<th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th>";
+                snap.forEach(d => {
+                    const c = d.data();
+                    const docBase = (c.doctor || '').replace("Dr. ", "");
+                    if (docBase === filtroDoctor && (!fInicio || c.fecha >= fInicio) && (!fFin || c.fecha <= fFin)) {
+                        tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${formatearCedula(c.cedula||'')}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${formatearFecha(c.fecha||'')}</td></tr>`;
+                        contador++;
+                    }
+                });
+            }
             document.getElementById("contador-citas").innerText = `Total: ${contador} citas`;
         };
 
