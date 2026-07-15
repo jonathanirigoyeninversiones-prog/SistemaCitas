@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>1111 Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         #bcv-container { position: absolute; top: 10px; right: 10px; background: #fff; padding: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ccc; }
@@ -50,13 +50,11 @@
         let tasaBCV = 0;
         const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-        // Función actualizada para obtener el precio desde la API funcional[cite: 2]
         async function obtenerPrecioBCV() {
             try {
-                const response = await fetch('https://rates.dolarvzla.com/bcv/latest.json');
+                const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
                 const data = await response.json();
-                // Ajustado para capturar el valor de la API de DolarVZLA[cite: 2]
-                tasaBCV = data.usd; 
+                tasaBCV = data.promedio;
                 document.getElementById('precio-bcv').innerText = "Bs. " + tasaBCV.toLocaleString('es-VE', {minimumFractionDigits: 2});
             } catch (error) {
                 document.getElementById('precio-bcv').innerText = "Error al cargar tasa";
