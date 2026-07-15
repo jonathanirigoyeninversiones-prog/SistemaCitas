@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>P111  anel de Administración</title>
+    <title>Panel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -104,6 +104,7 @@
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
                 cargarCitas();
+                setInterval(cargarCitas, 60000); // Refresco automático cada minuto
             } else { alert("Credenciales incorrectas"); }
         };
 
