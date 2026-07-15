@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>222 Historial Médico Avanzado</title>
+    <title>Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -59,7 +59,7 @@
                 const snap = await getDocs(collection(db, "historial_citas"));
                 historialCompleto = snap.docs.map(d => d.data());
                 const mSnap = await getDocs(collection(db, "medicos"));
-                medicos = mSnap.docs.map(d => ({id: d.id, ...d.data(), porcentaje: 60}));
+                medicos = mSnap.docs.map(d => ({id: d.id, ...d.data(), porcentaje: d.data().porcentaje || 60}));
                 renderizarConfig();
                 generarReporte();
             } catch (e) { alert("Error: " + e.message); }
@@ -67,8 +67,9 @@
 
         function renderizarConfig() {
             const div = document.getElementById("lista-medicos-config");
+            div.innerHTML = "";
             medicos.forEach((m, idx) => {
-                div.innerHTML += `<div>${m.Nombre}: <input type="number" value="${m.porcentaje}" style="width:40px" onchange="medicos[${idx}].porcentaje = this.value"> %</div>`;
+                div.innerHTML += `<div>${m.Nombre}: ${m.porcentaje}%</div>`;
             });
         }
 
@@ -83,15 +84,16 @@
                 historialCompleto.forEach(c => {
                     const m = medicos.find(med => med.Nombre === c.doctor) || {porcentaje: 60};
                     const precioUSD = c.precioUSD || 0;
-                    const precioBs = parseFloat(c.precioBs.replace(' Bs', '').replace('.', '').replace(',', '.')) || 0;
+                    const cadenaPrecio = c.precioBs || "0"; 
+                    const precioBs = parseFloat(cadenaPrecio.toString().replace(' Bs', '').replace('.', '').replace(',', '.')) || 0;
                     const pagoMedico = (precioBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
-                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.doctor}</td><td>$${precioUSD}</td><td>${c.precioBs}</td><td>${pagoMedico} Bs</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.doctor}</td><td>$${precioUSD}</td><td>${cadenaPrecio}</td><td>${pagoMedico} Bs</td></tr>`;
                 });
             } else {
                 thead.innerHTML = "<tr><th>Doctor</th><th>Total Citas</th><th>Total Pago Médico (Bs)</th></tr>";
                 medicos.forEach(m => {
                     const citas = historialCompleto.filter(c => c.doctor === m.Nombre);
-                    const totalBs = citas.reduce((acc, c) => acc + (parseFloat(c.precioBs.replace(' Bs', '').replace('.', '').replace(',', '.')) || 0), 0);
+                    const totalBs = citas.reduce((acc, c) => acc + (parseFloat((c.precioBs || "0").toString().replace(' Bs', '').replace('.', '').replace(',', '.')) || 0), 0);
                     const totalPago = (totalBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
                     tbody.innerHTML += `<tr><td>${m.Nombre}</td><td>${citas.length}</td><td>${totalPago} Bs</td></tr>`;
                 });
