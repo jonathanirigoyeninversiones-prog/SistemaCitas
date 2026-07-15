@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Panel de Recepción</title>
+    <title>Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -58,7 +58,6 @@
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
                 cargarCitas();
-                setInterval(cargarCitas, 60000);
             } catch (e) { alert("Error: " + e.message); }
         };
 
@@ -73,11 +72,12 @@
             tbody.innerHTML = "";
             datos.forEach(c => {
                 const cedulaFormateada = new Intl.NumberFormat('es-VE').format(c.cedula);
-                const fechaFormateada = c.fecha ? c.fecha.split('-').reverse().join('-') : 'N/A';
+                // Muestra la fecha formateada pero conserva el valor original c.fecha para el ordenamiento
+                const fechaMostrar = c.fecha ? c.fecha.split('-').reverse().join('-') : 'N/A';
                 const esConfirmado = c.estado === "Confirmado";
                 const tr = document.createElement("tr");
                 tr.innerHTML = `<td>${c.nombre}</td><td>${cedulaFormateada}</td><td>${c.telefono}</td><td>${c.doctor}</td>
-                                <td>${fechaFormateada}</td>
+                                <td>${fechaMostrar}</td>
                                 <td>${c.hora || 'N/A'}</td>
                                 <td class="estado ${esConfirmado ? 'estado-confirmado' : ''}">${esConfirmado ? 'Confirmado' : 'Pendiente'}</td>
                                 <td>
@@ -91,6 +91,7 @@
 
         window.ordenarPorFecha = () => {
             datosCitas.sort((a, b) => {
+                // Combina fecha (yyyy-mm-dd) y hora para comparar correctamente
                 const fA = new Date(`${a.fecha}T${a.hora || '00:00'}`);
                 const fB = new Date(`${b.fecha}T${b.hora || '00:00'}`);
                 return ordenAsc ? fA - fB : fB - fA;
