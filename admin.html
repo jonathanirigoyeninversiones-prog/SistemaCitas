@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ccc Panel de Administración</title>
+    <title>Panel de Administración</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -48,7 +48,7 @@
         <div class="filtros-historial">
             <select id="filtro-doctor" onchange="mostrarHistorial()">
                 <option value="todos">Todos los médicos</option>
-                <option value="Dr. Juan Perez">Dr. Juan Perez</option>
+                <option value="Juan Perez">Juan Perez</option>
                 <option value="pedro el escamoso">Pedro el escamoso</option>
             </select>
             <input type="date" id="fecha-inicio" onchange="mostrarHistorial()">
@@ -173,9 +173,12 @@
 
             snap.forEach(d => {
                 const c = d.data();
-                const fechaCita = c.fecha; // Se asume formato YYYY-MM-DD para comparar
+                const fechaCita = c.fecha;
                 
-                let cumpleDoctor = (filtroDoctor === "todos" || c.doctor === filtroDoctor);
+                // Normalizamos el nombre del doctor en la base de datos eliminando "Dr. " para comparar
+                const doctorBase = (c.doctor || '').replace("Dr. ", "");
+                
+                let cumpleDoctor = (filtroDoctor === "todos" || doctorBase === filtroDoctor);
                 let cumpleFecha = true;
                 if(fInicio) cumpleFecha = cumpleFecha && (fechaCita >= fInicio);
                 if(fFin) cumpleFecha = cumpleFecha && (fechaCita <= fFin);
