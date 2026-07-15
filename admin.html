@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Recepción</title>
+    <title>111 Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -30,7 +30,7 @@
             <thead>
                 <tr>
                     <th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th>
-                    <th onclick="ordenar('fecha')">Fecha ↕</th>
+                    <th onclick="ordenarPorFecha()">Fecha ↕</th>
                     <th onclick="ordenar('hora')">Hora ↕</th>
                     <th onclick="ordenar('estado')">Estado ↕</th>
                     <th>Acciones</th>
@@ -88,6 +88,16 @@
                                 </td>`;
                 tbody.appendChild(tr);
             });
+        };
+
+        window.ordenarPorFecha = () => {
+            ordenAsc.fecha = !ordenAsc.fecha;
+            datosCitas.sort((a, b) => {
+                const fechaHoraA = new Date(`${a.fecha}T${a.hora || '00:00'}`);
+                const fechaHoraB = new Date(`${b.fecha}T${b.hora || '00:00'}`);
+                return ordenAsc.fecha ? fechaHoraA - fechaHoraB : fechaHoraB - fechaHoraA;
+            });
+            renderizarTabla(datosCitas);
         };
 
         window.ordenar = (campo) => {
