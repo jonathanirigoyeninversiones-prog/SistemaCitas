@@ -2,19 +2,22 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Historial Médico</title>
+    <title>vvv  Historial Médico</title>
 </head>
 <body>
     <div id="login-layer">
         <h2>Acceso Historial</h2>
-        <input type="email" id="email" placeholder="Correo (historial@clinica.com)">
+        <input type="email" id="email" placeholder="Correo">
         <input type="password" id="pass" placeholder="Clave">
         <button onclick="login()">Ingresar</button>
     </div>
 
     <div id="historial-content" style="display:none;">
         <h1>Historial de Citas</h1>
-        <table id="tabla-historial">...</table>
+        <table id="tabla-historial">
+            <thead><tr><th>Nombre</th><th>Fecha</th><th>Doctor</th></tr></thead>
+            <tbody id="lista-historial"></tbody>
+        </table>
     </div>
 
     <script type="module">
@@ -30,7 +33,13 @@
                 await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
-                // ... Aquí va tu lógica de mostrarHistorial
+                const snap = await getDocs(collection(db, "historial_citas"));
+                const tbody = document.getElementById("lista-historial");
+                tbody.innerHTML = "";
+                snap.forEach(doc => {
+                    const c = doc.data();
+                    tbody.innerHTML += `<tr><td>${c.nombre||''}</td><td>${c.fecha||''}</td><td>${c.doctor||''}</td></tr>`;
+                });
             } catch (e) { alert("Error: " + e.message); }
         };
     </script>
