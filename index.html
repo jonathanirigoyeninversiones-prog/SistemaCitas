@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>222 Reserva de Citas</title>
+    <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         /* Contenedor del precio añadido */
@@ -58,14 +58,15 @@
         let medicos = [];
         const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-        // Función para obtener el precio del BCV
+        // Función corregida para obtener el precio del BCV
         async function obtenerPrecioBCV() {
             try {
-                const response = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=bcv');
+                const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
                 const data = await response.json();
-                document.getElementById('precio-bcv').innerText = "Bs. " + data.monitors.bcv.price;
+                document.getElementById('precio-bcv').innerText = "Bs. " + data.promedio.toFixed(2);
             } catch (error) {
-                document.getElementById('precio-bcv').innerText = "Error";
+                document.getElementById('precio-bcv').innerText = "Reintentando...";
+                setTimeout(obtenerPrecioBCV, 5000);
             }
         }
 
