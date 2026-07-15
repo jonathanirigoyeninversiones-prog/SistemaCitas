@@ -2,7 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>vvv  Historial Médico</title>
+    <title>222 Historial Médico Avanzado</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
+        .controls { margin-bottom: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    </style>
 </head>
 <body>
     <div id="login-layer">
@@ -13,10 +20,23 @@
     </div>
 
     <div id="historial-content" style="display:none;">
-        <h1>Historial de Citas</h1>
-        <table id="tabla-historial">
-            <thead><tr><th>Nombre</th><th>Fecha</th><th>Doctor</th></tr></thead>
-            <tbody id="lista-historial"></tbody>
+        <h1>Reportes de Citas</h1>
+        <div class="controls">
+            <input type="date" id="fechaInicio">
+            <input type="date" id="fechaFin">
+            <select id="tipoReporte" onchange="actualizarSeleccion()">
+                <option value="todosMedicos">Todos los Médicos (Resumen)</option>
+                <option value="todosPacientes">Todos los Pacientes (Detallado)</option>
+                <option value="porMedico">Por Médico Específico</option>
+            </select>
+            <div id="divMedico" style="display:none;">
+                <input type="text" id="nombreMedico" placeholder="Nombre del Médico">
+            </div>
+            <button onclick="generarReporte()">Generar Reporte</button>
+        </div>
+        <table id="tabla-reporte">
+            <thead id="head-reporte"></thead>
+            <tbody id="lista-reporte"></tbody>
         </table>
     </div>
 
@@ -33,14 +53,37 @@
                 await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
-                const snap = await getDocs(collection(db, "historial_citas"));
-                const tbody = document.getElementById("lista-historial");
-                tbody.innerHTML = "";
-                snap.forEach(doc => {
-                    const c = doc.data();
-                    tbody.innerHTML += `<tr><td>${c.nombre||''}</td><td>${c.fecha||''}</td><td>${c.doctor||''}</td></tr>`;
-                });
             } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.actualizarSeleccion = () => {
+            document.getElementById("divMedico").style.display = document.getElementById("tipoReporte").value === "porMedico" ? "block" : "none";
+        };
+
+        window.generarReporte = async () => {
+            const inicio = document.getElementById("fechaInicio").value;
+            const fin = document.getElementById("fechaFin").value;
+            const tipo = document.getElementById("tipoReporte").value;
+            const snap = await getDocs(collection(db, "historial_citas"));
+            const tbody = document.getElementById("lista-reporte");
+            const thead = document.getElementById("head-reporte");
+            tbody.innerHTML = "";
+            
+            let datos = snap.docs.map(d => d.data()).filter(c => (!inicio || c.fecha >= inicio) && (!fin || c.fecha <= fin));
+
+            if (tipo === "todosMedicos") {
+                thead.innerHTML = "<tr><th>Doctor</th><th>Cantidad de Citas</th></tr>";
+                const conteo = {};
+                datos.forEach(c => conteo[c.doctor] = (conteo[c.doctor] || 0) + 1);
+                for (let d in conteo) tbody.innerHTML += `<tr><td>${d}</td><td>${conteo[d]}</td></tr>`;
+            } else if (tipo === "todosPacientes") {
+                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th></tr>";
+                datos.forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`);
+            } else if (tipo === "porMedico") {
+                const medico = document.getElementById("nombreMedico").value;
+                thead.innerHTML = "<tr><th>Nombre</th><th>Fecha</th><th>Hora</th></tr>";
+                datos.filter(c => c.doctor === medico).forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.fecha}</td><td>${c.hora}</td></tr>`);
+            }
         };
     </script>
 </body>
