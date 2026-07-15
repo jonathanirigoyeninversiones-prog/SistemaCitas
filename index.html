@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reserva de Citas</title>
+    <title>... Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         #bcv-container { position: absolute; top: 10px; right: 10px; background: #fff; padding: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ccc; }
@@ -86,7 +86,7 @@
 
         window.mostrarDiasDisponibles = (medico) => {
             const cont = document.getElementById("seccion-seleccion");
-            cont.innerHTML = `<h3>Dr. ${medico.Nombre} - Próximos 3 días laborables:</h3>`;
+            cont.innerHTML = `<h3>Dr. ${medico.Nombre} - Días disponibles:</h3>`;
             
             let diasEncontrados = 0;
             let fecha = new Date();
