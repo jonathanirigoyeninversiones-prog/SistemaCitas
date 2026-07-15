@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Historial Médico Avanzado</title>
+    <title>111 Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -24,6 +24,7 @@
         <div class="controls">
             <input type="date" id="fechaInicio">
             <input type="date" id="fechaFin">
+            <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula...">
             <select id="tipoReporte" onchange="actualizarSeleccion()">
                 <option value="todosMedicos">Todos los Médicos (Resumen)</option>
                 <option value="todosPacientes">Todos los Pacientes (Detallado)</option>
@@ -76,13 +77,18 @@
         window.generarReporte = async () => {
             const inicio = document.getElementById("fechaInicio").value;
             const fin = document.getElementById("fechaFin").value;
+            const filtroCedula = document.getElementById("filtroCedula").value;
             const tipo = document.getElementById("tipoReporte").value;
             const snap = await getDocs(collection(db, "historial_citas"));
             const tbody = document.getElementById("lista-reporte");
             const thead = document.getElementById("head-reporte");
             tbody.innerHTML = "";
             
-            let datos = snap.docs.map(d => d.data()).filter(c => (!inicio || c.fecha >= inicio) && (!fin || c.fecha <= fin));
+            let datos = snap.docs.map(d => d.data()).filter(c => 
+                (!inicio || c.fecha >= inicio) && 
+                (!fin || c.fecha <= fin) &&
+                (!filtroCedula || c.cedula.includes(filtroCedula))
+            );
 
             if (tipo === "todosMedicos") {
                 thead.innerHTML = "<tr><th>Doctor</th><th>Cantidad de Citas</th></tr>";
@@ -94,8 +100,8 @@
                 datos.forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`);
             } else if (tipo === "porMedico") {
                 const medico = document.getElementById("selectMedico").value;
-                thead.innerHTML = "<tr><th>Nombre</th><th>Fecha</th><th>Hora</th></tr>";
-                datos.filter(c => c.doctor === medico).forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.fecha}</td><td>${c.hora}</td></tr>`);
+                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Fecha</th><th>Hora</th></tr>";
+                datos.filter(c => c.doctor === medico).forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.fecha}</td><td>${c.hora}</td></tr>`);
             }
         };
     </script>
