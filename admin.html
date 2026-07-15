@@ -90,12 +90,12 @@
         };
 
         window.ordenarPorFecha = () => {
-            ordenAsc = !ordenAsc;
             datosCitas.sort((a, b) => {
                 const fA = new Date(`${a.fecha}T${a.hora || '00:00'}`);
                 const fB = new Date(`${b.fecha}T${b.hora || '00:00'}`);
                 return ordenAsc ? fA - fB : fB - fA;
             });
+            ordenAsc = !ordenAsc;
             renderizarTabla(datosCitas);
         };
 
