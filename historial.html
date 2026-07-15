@@ -2,12 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Historial Médico Avanzado</title>
+    <title>Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
         .controls { margin-bottom: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px; }
-        #config-porcentajes { position: absolute; top: 10px; right: 10px; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
     </style>
@@ -21,10 +20,6 @@
     </div>
 
     <div id="historial-content" style="display:none;">
-        <div id="config-porcentajes">
-            <h4>% Pago Médico (Editar y perder foco)</h4>
-            <div id="lista-medicos-config"></div>
-        </div>
         <h1>Reportes de Citas</h1>
         <div class="controls">
             <input type="date" id="fechaInicio">
@@ -45,7 +40,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         let historialCompleto = [];
@@ -56,28 +51,16 @@
                 await signInWithEmailAndPassword(getAuth(), document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
+                
                 const snap = await getDocs(collection(db, "historial_citas"));
                 historialCompleto = snap.docs.map(d => d.data());
+                
                 const mSnap = await getDocs(collection(db, "medicos"));
-                medicos = mSnap.docs.map(d => ({id: d.id, ...d.data(), porcentaje: d.data().porcentaje || 60}));
-                renderizarConfig();
+                medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                
                 generarReporte();
             } catch (e) { alert("Error: " + e.message); }
         };
-
-        window.actualizarPorcentaje = async (id, valor) => {
-            await updateDoc(doc(db, "medicos", id), { porcentaje: parseFloat(valor) });
-            medicos.find(m => m.id === id).porcentaje = parseFloat(valor);
-            generarReporte();
-        };
-
-        function renderizarConfig() {
-            const div = document.getElementById("lista-medicos-config");
-            div.innerHTML = "";
-            medicos.forEach(m => {
-                div.innerHTML += `<div>${m.Nombre}: <input type="number" value="${m.porcentaje}" style="width:40px" onchange="actualizarPorcentaje('${m.id}', this.value)">%</div>`;
-            });
-        }
 
         window.generarReporte = () => {
             const tbody = document.getElementById("lista-reporte");
@@ -92,6 +75,7 @@
                     const precioUSD = c.precioUSD || 0;
                     const cadenaPrecio = c.precioBs || "0"; 
                     const precioBs = parseFloat(cadenaPrecio.toString().replace(' Bs', '').replace('.', '').replace(',', '.')) || 0;
+                    
                     const pagoMedico = (precioBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
                     tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.doctor}</td><td>$${precioUSD}</td><td>${cadenaPrecio}</td><td>${pagoMedico} Bs</td></tr>`;
                 });
@@ -100,7 +84,8 @@
                 medicos.forEach(m => {
                     const citas = historialCompleto.filter(c => c.doctor === m.Nombre);
                     const totalBs = citas.reduce((acc, c) => acc + (parseFloat((c.precioBs || "0").toString().replace(' Bs', '').replace('.', '').replace(',', '.')) || 0), 0);
-                    const totalPago = (totalBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
+                    const porcentaje = m.porcentaje || 60;
+                    const totalPago = (totalBs * (porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
                     tbody.innerHTML += `<tr><td>${m.Nombre}</td><td>${citas.length}</td><td>${totalPago} Bs</td></tr>`;
                 });
             }
