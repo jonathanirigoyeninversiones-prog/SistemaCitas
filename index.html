@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>... Reserva de Citas</title>
+    <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         #bcv-container { position: absolute; top: 10px; right: 10px; background: #fff; padding: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ccc; }
@@ -49,31 +49,52 @@
         let medicos = [];
         const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
+        // ======= NUEVA FUNCIÓN CON API OFICIAL BCV (rates.dolarvzla.com) =======
+        const BASE_API = 'https://rates.dolarvzla.com';
+
         async function obtenerPrecioBCV() {
             try {
-                const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
-                const data = await response.json();
-                document.getElementById('precio-bcv').innerText = "Bs. " + data.promedio.toFixed(2);
+                // 1. Obtener lista de fechas disponibles
+                const respFechas = await fetch(`${BASE_API}/bcv/available-dates.json`);
+                if (!respFechas.ok) throw new Error('Error al obtener fechas');
+                const fechas = await respFechas.json();
+                if (!fechas.length) throw new Error('No hay fechas disponibles');
+                
+                // 2. Tomar la última fecha (más reciente)
+                const ultimaFecha = fechas[fechas.length - 1];
+                const [year, month] = ultimaFecha.split('-');
+
+                // 3. Obtener las tasas de ese mes
+                const respTasas = await fetch(`${BASE_API}/bcv/${year}/${month}/list.json`);
+                if (!respTasas.ok) throw new Error('Error al obtener tasas');
+                const tasas = await respTasas.json();
+
+                // 4. Buscar la tasa correspondiente a la última fecha
+                const tasa = tasas.find(r => r.date === ultimaFecha);
+                if (!tasa) throw new Error('Tasa no encontrada para la fecha');
+
+                // 5. Mostrar el precio USD en bolívares
+                const precio = tasa.usd;
+                document.getElementById('precio-bcv').innerText = "Bs. " + precio.toFixed(2);
             } catch (error) {
+                console.error('Error al obtener precio BCV:', error);
                 document.getElementById('precio-bcv').innerText = "Reintentando...";
                 setTimeout(obtenerPrecioBCV, 5000);
             }
         }
+        // ===============================================================
 
+        // Programar actualización diaria a las 18:00
         function programarActualizacionDiaria() {
             const ahora = new Date();
             const proxima18 = new Date();
-            proxima18.setHours(18, 0, 0, 0); // 18:00:00
-
+            proxima18.setHours(18, 0, 0, 0);
             if (ahora >= proxima18) {
                 proxima18.setDate(proxima18.getDate() + 1);
             }
-
             const msHasta18 = proxima18 - ahora;
-
             setTimeout(() => {
-                obtenerPrecioBCV(); // actualiza a las 18:00
-                // y luego cada 24 horas
+                obtenerPrecioBCV();
                 setInterval(obtenerPrecioBCV, 24 * 60 * 60 * 1000);
             }, msHasta18);
         }
@@ -160,8 +181,8 @@
 
         window.addEventListener("DOMContentLoaded", () => {
             init();
-            obtenerPrecioBCV(); // carga inicial
-            programarActualizacionDiaria(); // agenda la actualización diaria a las 18:00
+            obtenerPrecioBCV();           // carga inicial
+            programarActualizacionDiaria(); // programa la actualización diaria a las 18:00
         });
     </script>
 </body>
