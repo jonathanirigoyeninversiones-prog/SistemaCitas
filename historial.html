@@ -2,11 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>11   Historial Médico Avanzado</title>
+    <title>222 Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
         .controls { margin-bottom: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px; }
+        #config-porcentajes { position: absolute; top: 10px; right: 10px; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
     </style>
@@ -20,19 +21,19 @@
     </div>
 
     <div id="historial-content" style="display:none;">
+        <div id="config-porcentajes">
+            <h4>% Pago Médico</h4>
+            <div id="lista-medicos-config"></div>
+        </div>
         <h1>Reportes de Citas</h1>
         <div class="controls">
             <input type="date" id="fechaInicio">
             <input type="date" id="fechaFin">
             <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula..." oninput="generarReporte()">
             <select id="tipoReporte" onchange="actualizarSeleccion()">
-                <option value="todosMedicos">Todos los Médicos (Resumen)</option>
-                <option value="todosPacientes">Todos los Pacientes (Detallado)</option>
-                <option value="porMedico">Por Médico Específico</option>
+                <option value="todosMedicos">Resumen por Médico</option>
+                <option value="todosPacientes">Detalle de Pacientes</option>
             </select>
-            <div id="divMedico" style="display:none;">
-                <select id="selectMedico"></select>
-            </div>
             <button onclick="generarReporte()">Generar Reporte</button>
         </div>
         <table id="tabla-reporte">
@@ -47,71 +48,58 @@
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
-        const auth = getAuth();
         let historialCompleto = [];
+        let medicos = [];
 
         window.login = async () => {
             try {
-                await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("pass").value);
+                await signInWithEmailAndPassword(getAuth(), document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
-                
                 const snap = await getDocs(collection(db, "historial_citas"));
                 historialCompleto = snap.docs.map(d => d.data());
-                
-                cargarMedicos();
+                const mSnap = await getDocs(collection(db, "medicos"));
+                medicos = mSnap.docs.map(d => ({id: d.id, ...d.data(), porcentaje: 60}));
+                renderizarConfig();
+                generarReporte();
             } catch (e) { alert("Error: " + e.message); }
         };
 
-        async function cargarMedicos() {
-            const snap = await getDocs(collection(db, "medicos"));
-            const select = document.getElementById("selectMedico");
-            select.innerHTML = "";
-            snap.forEach(d => {
-                const opt = document.createElement("option");
-                opt.value = d.data().Nombre;
-                opt.innerText = "Dr. " + d.data().Nombre;
-                select.appendChild(opt);
+        function renderizarConfig() {
+            const div = document.getElementById("lista-medicos-config");
+            medicos.forEach((m, idx) => {
+                div.innerHTML += `<div>${m.Nombre}: <input type="number" value="${m.porcentaje}" style="width:40px" onchange="medicos[${idx}].porcentaje = this.value"> %</div>`;
             });
         }
 
-        window.actualizarSeleccion = () => {
-            document.getElementById("divMedico").style.display = document.getElementById("tipoReporte").value === "porMedico" ? "block" : "none";
-            generarReporte();
-        };
-
         window.generarReporte = () => {
-            const inicio = document.getElementById("fechaInicio").value;
-            const fin = document.getElementById("fechaFin").value;
-            const filtroCedula = document.getElementById("filtroCedula").value;
-            const tipo = document.getElementById("tipoReporte").value;
             const tbody = document.getElementById("lista-reporte");
             const thead = document.getElementById("head-reporte");
             tbody.innerHTML = "";
+            const tipo = document.getElementById("tipoReporte").value;
             
-            // Función auxiliar para formatear cédula
-            const fmtC = (c) => new Intl.NumberFormat('es-VE').format(c);
-
-            let datos = historialCompleto.filter(c => 
-                (!inicio || c.fecha >= inicio) && 
-                (!fin || c.fecha <= fin) &&
-                (!filtroCedula || (c.cedula && c.cedula.toString().includes(filtroCedula)))
-            );
-
-            if (tipo === "todosMedicos") {
-                thead.innerHTML = "<tr><th>Doctor</th><th>Cantidad de Citas</th></tr>";
-                const conteo = {};
-                datos.forEach(c => conteo[c.doctor] = (conteo[c.doctor] || 0) + 1);
-                for (let d in conteo) tbody.innerHTML += `<tr><td>${d}</td><td>${conteo[d]}</td></tr>`;
-            } else if (tipo === "todosPacientes") {
-                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th></tr>";
-                datos.forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${fmtC(c.cedula)}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`);
-            } else if (tipo === "porMedico") {
-                const medico = document.getElementById("selectMedico").value;
-                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Fecha</th><th>Hora</th></tr>";
-                datos.filter(c => c.doctor === medico).forEach(c => tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${fmtC(c.cedula)}</td><td>${c.fecha}</td><td>${c.hora}</td></tr>`);
+            if (tipo === "todosPacientes") {
+                thead.innerHTML = "<tr><th>Nombre</th><th>Doctor</th><th>Precio USD</th><th>Precio Bs</th><th>Pago Médico (Bs)</th></tr>";
+                historialCompleto.forEach(c => {
+                    const m = medicos.find(med => med.Nombre === c.doctor) || {porcentaje: 60};
+                    const precioUSD = c.precioUSD || 0;
+                    const precioBs = parseFloat(c.precioBs.replace(' Bs', '').replace('.', '').replace(',', '.')) || 0;
+                    const pagoMedico = (precioBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
+                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.doctor}</td><td>$${precioUSD}</td><td>${c.precioBs}</td><td>${pagoMedico} Bs</td></tr>`;
+                });
+            } else {
+                thead.innerHTML = "<tr><th>Doctor</th><th>Total Citas</th><th>Total Pago Médico (Bs)</th></tr>";
+                medicos.forEach(m => {
+                    const citas = historialCompleto.filter(c => c.doctor === m.Nombre);
+                    const totalBs = citas.reduce((acc, c) => acc + (parseFloat(c.precioBs.replace(' Bs', '').replace('.', '').replace(',', '.')) || 0), 0);
+                    const totalPago = (totalBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
+                    tbody.innerHTML += `<tr><td>${m.Nombre}</td><td>${citas.length}</td><td>${totalPago} Bs</td></tr>`;
+                });
             }
         };
+
+        window.actualizarSeleccion = generarReporte;
+        window.login();
     </script>
 </body>
 </html>
