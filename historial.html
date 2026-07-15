@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Historial Médico Avanzado</title>
+    <title>Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -24,7 +24,8 @@
         <div class="controls">
             <input type="date" id="fechaInicio">
             <input type="date" id="fechaFin">
-            <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula...">
+            <!-- Se agregó oninput para que sea dinámico -->
+            <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula..." oninput="generarReporte()">
             <select id="tipoReporte" onchange="actualizarSeleccion()">
                 <option value="todosMedicos">Todos los Médicos (Resumen)</option>
                 <option value="todosPacientes">Todos los Pacientes (Detallado)</option>
@@ -48,12 +49,18 @@
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         const auth = getAuth();
+        let historialCompleto = []; // Guardamos los datos para filtrar sin consultar Firebase cada vez
 
         window.login = async () => {
             try {
                 await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
+                
+                // Cargar datos una sola vez al loguearse
+                const snap = await getDocs(collection(db, "historial_citas"));
+                historialCompleto = snap.docs.map(d => d.data());
+                
                 cargarMedicos();
             } catch (e) { alert("Error: " + e.message); }
         };
@@ -72,22 +79,22 @@
 
         window.actualizarSeleccion = () => {
             document.getElementById("divMedico").style.display = document.getElementById("tipoReporte").value === "porMedico" ? "block" : "none";
+            generarReporte();
         };
 
-        window.generarReporte = async () => {
+        window.generarReporte = () => {
             const inicio = document.getElementById("fechaInicio").value;
             const fin = document.getElementById("fechaFin").value;
             const filtroCedula = document.getElementById("filtroCedula").value;
             const tipo = document.getElementById("tipoReporte").value;
-            const snap = await getDocs(collection(db, "historial_citas"));
             const tbody = document.getElementById("lista-reporte");
             const thead = document.getElementById("head-reporte");
             tbody.innerHTML = "";
             
-            let datos = snap.docs.map(d => d.data()).filter(c => 
+            let datos = historialCompleto.filter(c => 
                 (!inicio || c.fecha >= inicio) && 
                 (!fin || c.fecha <= fin) &&
-                (!filtroCedula || c.cedula.includes(filtroCedula))
+                (!filtroCedula || (c.cedula && c.cedula.toString().includes(filtroCedula)))
             );
 
             if (tipo === "todosMedicos") {
