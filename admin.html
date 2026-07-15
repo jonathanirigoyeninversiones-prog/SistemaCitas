@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Panel de Recepción</title>
+    <title>Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -24,7 +24,11 @@
         <h1>Citas Pendientes</h1>
         <input type="text" id="filtro" placeholder="Filtrar por cédula..." onkeyup="filtrar()">
         <table id="tabla-citas">
-            <thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Acciones</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
+                </tr>
+            </thead>
             <tbody id="lista-citas"></tbody>
         </table>
     </div>
@@ -54,11 +58,12 @@
             tbody.innerHTML = "";
             snap.forEach(d => {
                 const c = d.data();
+                const cedulaFormateada = new Intl.NumberFormat('es-VE').format(c.cedula);
                 const tr = document.createElement("tr");
                 tr.setAttribute("data-cedula", c.cedula);
-                tr.innerHTML = `<td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td>
+                tr.innerHTML = `<td>${c.nombre}</td><td>${cedulaFormateada}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha || 'N/A'}</td><td class="estado">Pendiente</td>
                 <td>
-                    <button class="btn" style="background:green; color:white;" onclick="cambiarEstado(this)">Confirmado</button>
+                    <button class="btn" style="background:green; color:white;" onclick="cambiarEstado(this)">Confirmar</button>
                     <button class="btn" onclick="cumplirCita('${d.id}')">Cumplido</button>
                     <button class="btn" onclick="cancelarCita('${d.id}')">Cancelar</button>
                 </td>`;
@@ -67,8 +72,10 @@
         };
 
         window.cambiarEstado = (btn) => {
-            btn.parentElement.parentElement.style.backgroundColor = "green";
-            btn.parentElement.parentElement.style.color = "white";
+            const tr = btn.parentElement.parentElement;
+            tr.querySelector(".estado").innerText = "Confirmado";
+            tr.style.backgroundColor = "green";
+            tr.style.color = "white";
         };
 
         window.cumplirCita = async (id) => {
