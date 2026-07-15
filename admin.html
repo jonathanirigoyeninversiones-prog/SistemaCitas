@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>11}}}}}1Panel de Recepción</title>
+    <title>Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -62,7 +62,7 @@
                 medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
                 
                 cargarCitas();
-                setInterval(cargarCitas, 60000); // Actualiza cada minuto
+                setInterval(cargarCitas, 60000);
             } catch (e) { alert("Error: " + e.message); }
         };
 
@@ -100,7 +100,16 @@
         };
 
         window.confirmar = async (id) => { await updateDoc(doc(db, "citas", id), { estado: "Confirmado" }); cargarCitas(); };
-        window.cancelar = async (id) => { await deleteDoc(doc(db, "citas", id)); cargarCitas(); };
+        
+        window.cancelar = async (id) => {
+            const cita = datosCitas.find(d => d.id === id);
+            await addDoc(collection(db, "citas_canceladas"), { 
+                ...cita, 
+                fechaCancelacion: new Date().toISOString() 
+            });
+            await deleteDoc(doc(db, "citas", id));
+            cargarCitas();
+        };
         
         window.cumplir = async (id, usd, bs) => {
             const cita = datosCitas.find(d => d.id === id);
