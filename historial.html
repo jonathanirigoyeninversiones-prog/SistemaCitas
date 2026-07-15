@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial Médico</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
+        #historial-content { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #333; color: white; padding: 10px; }
+        td { border: 1px solid #ddd; padding: 10px; }
+        .filtros { margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div id="login-layer">
+        <h2>Acceso Historial</h2>
+        <input type="text" id="user" placeholder="Usuario"><br><br>
+        <input type="password" id="pass" placeholder="Clave"><br><br>
+        <button onclick="validar()">Ingresar</button>
+    </div>
+
+    <div id="historial-content">
+        <h1>Historial de Citas Cumplidas</h1>
+        <div class="filtros">
+            <select id="filtro-doctor" onchange="mostrarHistorial()">
+                <option value="todos">TODOS (Lista completa)</option>
+                <option value="resumen">RESUMEN POR MÉDICO (Cantidad)</option>
+                <option value="Juan Perez">Dr. Juan Perez</option>
+                <option value="pedro el escamoso">Pedro el escamoso</option>
+            </select>
+            <input type="date" id="fecha-inicio" onchange="mostrarHistorial()">
+            <input type="date" id="fecha-fin" onchange="mostrarHistorial()">
+            <span id="contador-citas" style="margin-left: 20px; font-weight: bold;"></span>
+        </div>
+        <table>
+            <thead><tr id="encabezado-tabla"></tr></thead>
+            <tbody id="lista-historial"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
+
+        window.validar = async () => {
+            const u = document.getElementById("user").value.trim(), p = document.getElementById("pass").value.trim();
+            const docSnap = await getDoc(doc(db, "configuracion", "hitorial"));
+            if (docSnap.exists() && docSnap.data().Usuario.trim() === u && docSnap.data().Clave.trim() === p) {
+                document.getElementById("login-layer").style.display = "none";
+                document.getElementById("historial-content").style.display = "block";
+                mostrarHistorial();
+            } else { alert("Credenciales incorrectas"); }
+        };
+
+        window.mostrarHistorial = async () => {
+            const filtro = document.getElementById("filtro-doctor").value, fInicio = document.getElementById("fecha-inicio").value, fFin = document.getElementById("fecha-fin").value;
+            const snap = await getDocs(collection(db, "historial_citas"));
+            const tbody = document.getElementById("lista-historial"), header = document.getElementById("encabezado-tabla");
+            tbody.innerHTML = ""; let contador = 0;
+
+            if (filtro === "resumen") {
+                header.innerHTML = "<th>Médico</th><th>Pacientes Atendidos</th>";
+                const resumen = {};
+                snap.forEach(d => { const c = d.data(); if((!fInicio || c.fecha >= fInicio) && (!fFin || c.fecha <= fFin)) { resumen[c.doctor] = (resumen[c.doctor] || 0) + 1; contador++; }});
+                for (let d in resumen) tbody.innerHTML += `<tr><td>${d}</td><td>${resumen[d]}</td></tr>`;
+            } else {
+                header.innerHTML = "<th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Fecha</th>";
+                snap.forEach(d => {
+                    const c = d.data();
+                    if ((filtro === "todos" || c.doctor.replace("Dr. ", "") === filtro) && (!fInicio || c.fecha >= fInicio) && (!fFin || c.fecha <= fFin)) {
+                        tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`;
+                        contador++;
+                    }
+                });
+            }
+            document.getElementById("contador-citas").innerText = `Total: ${contador} registros`;
+        };
+    </script>
+</body>
+</html>
