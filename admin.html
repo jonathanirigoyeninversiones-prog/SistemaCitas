@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111Panel de Recepción</title>
+    <title>Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -24,7 +24,9 @@
 
     <div id="admin-content">
         <div id="tasa-control">
-            Tasa BCV: <input type="number" id="tasa-bcv" value="0" step="0.01" onchange="renderizarTabla(datosCitas)"> Bs.
+            Tasa BCV: <input type="number" id="tasa-bcv" value="0" step="0.01"> 
+            <button onclick="guardarTasa()">Aceptar</button>
+            <button onclick="cargarCitas()">Refrescar</button>
         </div>
         <h1>Citas Pendientes</h1>
         <table id="tabla-citas">
@@ -40,7 +42,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, addDoc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         
@@ -52,10 +54,22 @@
                 await signInWithEmailAndPassword(getAuth(), document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
+                
+                // Cargar tasa guardada
+                const tasaSnap = await getDoc(doc(db, "configuracion", "tasa_bcv"));
+                if (tasaSnap.exists()) document.getElementById("tasa-bcv").value = tasaSnap.data().valor;
+                
                 const mSnap = await getDocs(collection(db, "medicos"));
                 medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
                 cargarCitas();
             } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.guardarTasa = async () => {
+            const valor = parseFloat(document.getElementById("tasa-bcv").value);
+            await setDoc(doc(db, "configuracion", "tasa_bcv"), { valor: valor });
+            alert("Tasa guardada en Firebase");
+            renderizarTabla(datosCitas);
         };
 
         window.cargarCitas = async () => {
@@ -92,7 +106,7 @@
             cargarCitas();
         };
 
-        window.login(); // Simplificado para pruebas
+        window.login();
     </script>
 </body>
 </html>
