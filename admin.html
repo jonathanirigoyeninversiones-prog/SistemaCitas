@@ -1,15 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Panel de Recepción</title>
+    <title>Panel de Recepción</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
         #admin-content { display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .btn { cursor: pointer; padding: 5px; margin: 2px; }
     </style>
 </head>
 <body>
@@ -22,6 +22,7 @@
 
     <div id="admin-content">
         <h1>Citas Pendientes</h1>
+        <input type="text" id="filtro" placeholder="Filtrar por cédula..." onkeyup="filtrar()">
         <table id="tabla-citas">
             <thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Cita</th><th>Acciones</th></tr></thead>
             <tbody id="lista-citas"></tbody>
@@ -31,7 +32,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         const auth = getAuth();
@@ -41,14 +42,54 @@
                 await signInWithEmailAndPassword(auth, document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("admin-content").style.display = "block";
-                const snap = await getDocs(collection(db, "citas"));
-                const tbody = document.getElementById("lista-citas");
-                tbody.innerHTML = "";
-                snap.forEach(doc => {
-                    const c = doc.data();
-                    tbody.innerHTML += `<tr><td>${c.nombre||''}</td><td>${c.cedula||''}</td><td>${c.telefono||''}</td><td>${c.doctor||''}</td><td>Cargado</td></tr>`;
-                });
+                cargarCitas();
+                setInterval(cargarCitas, 60000); // Actualizar cada minuto
             } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.cargarCitas = async () => {
+            const snap = await getDocs(collection(db, "citas"));
+            const tbody = document.getElementById("lista-citas");
+            tbody.innerHTML = "";
+            snap.forEach(d => {
+                const c = d.data();
+                const tr = document.createElement("tr");
+                tr.setAttribute("data-cedula", c.cedula);
+                tr.innerHTML = `<td>${c.nombre}</td><td>${c.cedula}</td><td>${c.telefono}</td><td>${c.doctor}</td>
+                <td>
+                    <button class="btn" style="background:green; color:white;" onclick="cambiarEstado('${d.id}', 'Confirmado', this)">Confirmar</button>
+                    <button class="btn" onclick="cumplirCita('${d.id}')">Cumplido</button>
+                    <button class="btn" onclick="cancelarCita('${d.id}')">Cancelar</button>
+                </td>`;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.cambiarEstado = (id, estado, btn) => {
+            btn.parentElement.parentElement.style.backgroundColor = "#d4edda";
+            btn.innerText = "Confirmado";
+        };
+
+        window.cumplirCita = async (id) => {
+            const docRef = doc(db, "citas", id);
+            const snap = await getDocs(collection(db, "citas")); // Solo para obtener datos actuales
+            // Aquí deberías buscar el documento específico por ID para extraer sus datos
+            const data = (await getDocs(collection(db, "citas"))).docs.find(d => d.id === id).data();
+            await addDoc(collection(db, "historial_citas"), data);
+            await deleteDoc(docRef);
+            cargarCitas();
+        };
+
+        window.cancelarCita = async (id) => {
+            await deleteDoc(doc(db, "citas", id));
+            cargarCitas();
+        };
+
+        window.filtrar = () => {
+            const val = document.getElementById("filtro").value;
+            document.querySelectorAll("#lista-citas tr").forEach(tr => {
+                tr.style.display = tr.getAttribute("data-cedula").includes(val) ? "" : "none";
+            });
         };
     </script>
 </body>
