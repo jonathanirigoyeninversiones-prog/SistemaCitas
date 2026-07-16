@@ -2,14 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>11 Historial Médico Avanzado</title>
+    <title>mmm Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
         .controls { margin-bottom: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        .btn-danger { background-color: #dc3545; color: white; border: none; padding: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -25,11 +24,14 @@
         <div class="controls">
             <input type="date" id="fechaInicio">
             <input type="date" id="fechaFin">
-            <select id="filtroMedico"><option value="">Todos los médicos</option></select>
-            <input type="text" id="filtroCedula" placeholder="Filtrar Cédula o Doctor..." oninput="generarReporte()">
-            <button onclick="generarReporte()">Filtrar</button>
-            <button onclick="borrarCitasSeleccionadas()" class="btn-danger">Borrar Rango Seleccionado</button>
-            <button onclick="cargarDatos()">Refrescar</button>
+            <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula o Doctor..." oninput="generarReporte()">
+            <select id="tipoReporte" onchange="actualizarSeleccion()">
+                <option value="todosMedicos">Resumen por Médico</option>
+                <option value="todosPacientes">Detalle de Pacientes</option>
+                <option value="canceladas">Citas Canceladas</option>
+            </select>
+            <button onclick="generarReporte()">Generar Reporte</button>
+            <button onclick="cargarDatos()">Refrescar Datos</button>
         </div>
         <table id="tabla-reporte">
             <thead id="head-reporte"></thead>
@@ -40,41 +42,21 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         let historialCompleto = [];
+        let canceladasCompleto = [];
         let medicos = [];
 
         window.cargarDatos = async () => {
             const snap = await getDocs(collection(db, "historial_citas"));
-            historialCompleto = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            historialCompleto = snap.docs.map(d => d.data());
+            const cSnap = await getDocs(collection(db, "citas_canceladas"));
+            canceladasCompleto = cSnap.docs.map(d => d.data());
             const mSnap = await getDocs(collection(db, "medicos"));
-            medicos = mSnap.docs.map(d => d.data());
-            
-            const sel = document.getElementById("filtroMedico");
-            medicos.forEach(m => sel.innerHTML += `<option value="${m.Nombre}">${m.Nombre}</option>`);
+            medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
             generarReporte();
-        };
-
-        window.borrarCitasSeleccionadas = async () => {
-            const fInicio = document.getElementById("fechaInicio").value;
-            const fFin = document.getElementById("fechaFin").value;
-            const medico = document.getElementById("filtroMedico").value;
-            
-            if(!confirm(`¿Seguro que deseas borrar las citas ${medico ? 'del Dr. ' + medico : 'de todos los médicos'} entre ${fInicio} y ${fFin}?`)) return;
-
-            const citasABorrar = historialCompleto.filter(c => {
-                const cumpleFecha = (!fInicio || c.fecha >= fInicio) && (!fFin || c.fecha <= fFin);
-                const cumpleMedico = !medico || c.doctor === medico;
-                return cumpleFecha && cumpleMedico;
-            });
-
-            for(const cita of citasABorrar) {
-                await deleteDoc(doc(db, "historial_citas", cita.id));
-            }
-            alert("Citas eliminadas: " + citasABorrar.length);
-            cargarDatos();
         };
 
         window.login = async () => {
@@ -83,20 +65,53 @@
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
                 await cargarDatos();
+                setInterval(cargarDatos, 60000);
             } catch (e) { alert("Error: " + e.message); }
         };
 
         window.generarReporte = () => {
             const tbody = document.getElementById("lista-reporte");
-            tbody.innerHTML = "";
+            const thead = document.getElementById("head-reporte");
+            // Limpiamos el filtro de cualquier punto para que coincida con números corridos[cite: 6]
             const filtro = document.getElementById("filtroCedula").value.toLowerCase().replace(/\./g, '');
+            tbody.innerHTML = "";
+            const tipo = document.getElementById("tipoReporte").value;
             
-            historialCompleto.filter(c => (c.cedula && c.cedula.toLowerCase().includes(filtro)) || (c.doctor && c.doctor.toLowerCase().includes(filtro))).forEach(c => {
-                const cedulaFormateada = parseInt(c.cedula).toLocaleString('es-VE');
-                tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${cedulaFormateada}</td><td>${c.doctor}</td><td>${c.fecha}</td></tr>`;
-            });
+            if (tipo === "todosPacientes") {
+                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Día</th><th>Fecha</th><th>Hora</th><th>Precio USD</th><th>Precio Bs</th><th>Pago Médico (Bs)</th></tr>";
+                historialCompleto.filter(c => 
+                    (c.cedula && c.cedula.toLowerCase().includes(filtro)) || 
+                    (c.doctor && c.doctor.toLowerCase().includes(filtro))
+                ).forEach(c => {
+                    const m = medicos.find(med => med.Nombre === c.doctor) || {porcentaje: 60};
+                    const precioBs = parseFloat(c.precioBs.toString().replace(/[^0-9.]/g, '')) || 0;
+                    const pagoMedico = (precioBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
+                    // Formateamos la cédula con puntos para visualización[cite: 6]
+                    const cedulaFormateada = parseInt(c.cedula).toLocaleString('es-VE');
+                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${cedulaFormateada}</td><td>${c.telefono}</td><td>${c.doctor}</td><td>${c.dia}</td><td>${c.fecha}</td><td>${c.hora}</td><td>$${c.precioUSD}</td><td>${c.precioBs}</td><td>${pagoMedico} Bs</td></tr>`;
+                });
+            } else if (tipo === "canceladas") {
+                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Doctor</th><th>Fecha Cita</th><th>Fecha Cancelación</th></tr>";
+                canceladasCompleto.filter(c => 
+                    (c.cedula && c.cedula.toLowerCase().includes(filtro)) || 
+                    (c.doctor && c.doctor.toLowerCase().includes(filtro))
+                ).forEach(c => {
+                    const cedulaFormateada = parseInt(c.cedula).toLocaleString('es-VE');
+                    tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${cedulaFormateada}</td><td>${c.doctor}</td><td>${c.fecha}</td><td>${c.fechaCancelacion ? c.fechaCancelacion.split('T')[0] : ''}</td></tr>`;
+                });
+            } else {
+                thead.innerHTML = "<tr><th>Doctor</th><th>Total Citas</th><th>Comisión (%)</th><th>Total Pago Médico (Bs)</th></tr>";
+                medicos.filter(m => m.Nombre.toLowerCase().includes(filtro)).forEach(m => {
+                    const citas = historialCompleto.filter(c => c.doctor === m.Nombre);
+                    const totalBs = citas.reduce((acc, c) => acc + (parseFloat(c.precioBs.toString().replace(/[^0-9.]/g, '')) || 0), 0);
+                    const porcentaje = m.porcentaje || 60;
+                    const totalPago = (totalBs * (porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
+                    tbody.innerHTML += `<tr><td>${m.Nombre}</td><td>${citas.length}</td><td>${porcentaje}%</td><td>${totalPago} Bs</td></tr>`;
+                });
+            }
         };
 
+        window.actualizarSeleccion = generarReporte;
         window.login();
     </script>
 </body>
