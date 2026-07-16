@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Historial Médico Avanzado</title>
+    <title>11 Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -31,6 +31,7 @@
                 <option value="canceladas">Citas Canceladas</option>
             </select>
             <button onclick="generarReporte()">Generar Reporte</button>
+            <button onclick="cargarDatos()">Refrescar Datos</button>
         </div>
         <table id="tabla-reporte">
             <thead id="head-reporte"></thead>
@@ -48,22 +49,27 @@
         let canceladasCompleto = [];
         let medicos = [];
 
+        window.cargarDatos = async () => {
+            const snap = await getDocs(collection(db, "historial_citas"));
+            historialCompleto = snap.docs.map(d => d.data());
+            
+            const cSnap = await getDocs(collection(db, "citas_canceladas"));
+            canceladasCompleto = cSnap.docs.map(d => d.data());
+            
+            const mSnap = await getDocs(collection(db, "medicos"));
+            medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
+            
+            generarReporte();
+        };
+
         window.login = async () => {
             try {
                 await signInWithEmailAndPassword(getAuth(), document.getElementById("email").value, document.getElementById("pass").value);
                 document.getElementById("login-layer").style.display = "none";
                 document.getElementById("historial-content").style.display = "block";
                 
-                const snap = await getDocs(collection(db, "historial_citas"));
-                historialCompleto = snap.docs.map(d => d.data());
-                
-                const cSnap = await getDocs(collection(db, "citas_canceladas"));
-                canceladasCompleto = cSnap.docs.map(d => d.data());
-                
-                const mSnap = await getDocs(collection(db, "medicos"));
-                medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
-                
-                generarReporte();
+                await cargarDatos();
+                setInterval(cargarDatos, 60000); // Actualización automática cada minuto[cite: 3]
             } catch (e) { alert("Error: " + e.message); }
         };
 
