@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>mmm Historial Médico Avanzado</title>
+    <title>11 Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -24,7 +24,7 @@
         <div class="controls">
             <input type="date" id="fechaInicio">
             <input type="date" id="fechaFin">
-            <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula..." oninput="generarReporte()">
+            <input type="text" id="filtroCedula" placeholder="Filtrar por Cédula o Doctor..." oninput="generarReporte()">
             <select id="tipoReporte" onchange="actualizarSeleccion()">
                 <option value="todosMedicos">Resumen por Médico</option>
                 <option value="todosPacientes">Detalle de Pacientes</option>
@@ -72,12 +72,16 @@
         window.generarReporte = () => {
             const tbody = document.getElementById("lista-reporte");
             const thead = document.getElementById("head-reporte");
+            const filtro = document.getElementById("filtroCedula").value.toLowerCase();
             tbody.innerHTML = "";
             const tipo = document.getElementById("tipoReporte").value;
             
             if (tipo === "todosPacientes") {
                 thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Doctor</th><th>Día</th><th>Fecha</th><th>Hora</th><th>Precio USD</th><th>Precio Bs</th><th>Pago Médico (Bs)</th></tr>";
-                historialCompleto.forEach(c => {
+                historialCompleto.filter(c => 
+                    (c.cedula && c.cedula.toLowerCase().includes(filtro)) || 
+                    (c.doctor && c.doctor.toLowerCase().includes(filtro))
+                ).forEach(c => {
                     const m = medicos.find(med => med.Nombre === c.doctor) || {porcentaje: 60};
                     const precioBs = parseFloat(c.precioBs.toString().replace(/[^0-9.]/g, '')) || 0;
                     const pagoMedico = (precioBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
@@ -85,12 +89,15 @@
                 });
             } else if (tipo === "canceladas") {
                 thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Doctor</th><th>Fecha Cita</th><th>Fecha Cancelación</th></tr>";
-                canceladasCompleto.forEach(c => {
+                canceladasCompleto.filter(c => 
+                    (c.cedula && c.cedula.toLowerCase().includes(filtro)) || 
+                    (c.doctor && c.doctor.toLowerCase().includes(filtro))
+                ).forEach(c => {
                     tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.cedula}</td><td>${c.doctor}</td><td>${c.fecha}</td><td>${c.fechaCancelacion ? c.fechaCancelacion.split('T')[0] : ''}</td></tr>`;
                 });
             } else {
                 thead.innerHTML = "<tr><th>Doctor</th><th>Total Citas</th><th>Comisión (%)</th><th>Total Pago Médico (Bs)</th></tr>";
-                medicos.forEach(m => {
+                medicos.filter(m => m.Nombre.toLowerCase().includes(filtro)).forEach(m => {
                     const citas = historialCompleto.filter(c => c.doctor === m.Nombre);
                     const totalBs = citas.reduce((acc, c) => acc + (parseFloat(c.precioBs.toString().replace(/[^0-9.]/g, '')) || 0), 0);
                     const porcentaje = m.porcentaje || 60;
