@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>111 Reserva de Citas</title>
+    <title>Reserva de Citas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .tab { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; margin: 5px; display: inline-block; border-radius: 20px; border: none; }
@@ -70,9 +70,8 @@
         window.mostrarDiasDisponibles = (medico) => {
             const cont = document.getElementById("seccion-seleccion");
             cont.innerHTML = `<h3>Dr. ${medico.Nombre} - Días disponibles:</h3>`;
-            let diasEncontrados = 0;
             let fecha = new Date();
-            for (let i = 0; i < 7 && diasEncontrados < 3; i++) {
+            for (let i = 0; i < 7; i++) {
                 let diaNombre = diasSemana[fecha.getDay()];
                 if (medico[diaNombre] && medico[diaNombre].length > 0) {
                     const fechaStr = fecha.toISOString().split('T')[0];
@@ -80,7 +79,6 @@
                     b.className = "tab"; b.innerText = `${diaNombre} ${fechaStr}`;
                     b.onclick = () => mostrarHoras(medico.id, fechaStr);
                     cont.appendChild(b);
-                    diasEncontrados++;
                 }
                 fecha.setDate(fecha.getDate() + 1);
             }
@@ -90,17 +88,19 @@
             const medico = medicos.find(m => m.id === id);
             const diaNombre = diasSemana[new Date(fecha + 'T00:00:00').getDay()];
             const horas = medico[diaNombre];
-            // Aquí ajusté para que busque el campo 'costo' de tu base de datos
-            const precioConsulta = medico.costo || "Consultar"; 
             const q = query(collection(db, "citas"), where("doctor", "==", medico.Nombre), where("fecha", "==", fecha));
             const snap = await getDocs(q);
             const ocupadas = snap.docs.map(d => d.data().hora);
+            
             const cont = document.getElementById("seccion-seleccion");
             cont.innerHTML = `<h3>Dr. ${medico.Nombre} - ${diaNombre} ${fecha}</h3>
-                              <p>Precio de consulta: <strong>${precioConsulta}</strong></p>
-                              <input type="text" id="nombre-paciente" placeholder="Nombre" required>
-                              <input type="text" id="cedula-paciente" placeholder="Cédula" required>
-                              <input type="tel" id="telefono-paciente" placeholder="Teléfono" required>`;
+                              <p>Precio: <strong>${medico.costo || "Consultar"}</strong></p>
+                              <input type="text" id="nombre-paciente" placeholder="Nombre">
+                              <input type="text" id="cedula-paciente" placeholder="Cédula">
+                              <input type="tel" id="telefono-paciente" placeholder="Teléfono">
+                              <div id="contenedor-horas"></div>`;
+            
+            const contHoras = document.getElementById("contenedor-horas");
             horas.forEach(h => {
                 const b = document.createElement("button");
                 b.className = "slot-btn"; b.innerText = h;
@@ -114,13 +114,11 @@
                     document.getElementById("modalGracias").style.display = "block";
                     mostrarHoras(id, fecha);
                 };
-                cont.appendChild(b);
+                contHoras.appendChild(b);
             });
         };
 
-        window.addEventListener("DOMContentLoaded", () => {
-            init();
-        });
+        window.addEventListener("DOMContentLoaded", init);
     </script>
 </body>
 </html>
