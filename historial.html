@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>11 Historial Médico Avanzado</title>
+    <title>Historial Médico Avanzado</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #login-layer { position: fixed; top:0; left:0; width:100%; height:100%; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
@@ -28,6 +28,7 @@
             <select id="tipoReporte" onchange="actualizarSeleccion()">
                 <option value="todosMedicos">Resumen por Médico</option>
                 <option value="todosPacientes">Detalle de Pacientes</option>
+                <option value="canceladas">Citas Canceladas</option>
             </select>
             <button onclick="generarReporte()">Generar Reporte</button>
         </div>
@@ -44,6 +45,7 @@
 
         const db = getFirestore(initializeApp({ apiKey: "AIzaSyAOblSllwV6HnkrOv-DuIDjqJo6tuPcnzE", authDomain: "sistemagestionnegocios-33fef.firebaseapp.com", projectId: "sistemagestionnegocios-33fef", storageBucket: "sistemagestionnegocios-33fef.firebasestorage.app", messagingSenderId: "1070762032731", appId: "1:1070762032731:web:74ad150e739181c8d0897e" }));
         let historialCompleto = [];
+        let canceladasCompleto = [];
         let medicos = [];
 
         window.login = async () => {
@@ -54,6 +56,9 @@
                 
                 const snap = await getDocs(collection(db, "historial_citas"));
                 historialCompleto = snap.docs.map(d => d.data());
+                
+                const cSnap = await getDocs(collection(db, "citas_canceladas"));
+                canceladasCompleto = cSnap.docs.map(d => d.data());
                 
                 const mSnap = await getDocs(collection(db, "medicos"));
                 medicos = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
@@ -77,6 +82,11 @@
                     const precioBs = parseFloat(cadenaPrecio.toString().replace(' Bs', '').replace('.', '').replace(',', '.')) || 0;
                     const pagoMedico = (precioBs * (m.porcentaje / 100)).toLocaleString('es-VE', {minimumFractionDigits: 2});
                     tbody.innerHTML += `<tr><td>${c.nombre || ''}</td><td>${c.cedula || ''}</td><td>${c.telefono || ''}</td><td>${c.doctor || ''}</td><td>${c.dia || ''}</td><td>${c.fecha || ''}</td><td>${c.hora || ''}</td><td>$${precioUSD}</td><td>${cadenaPrecio}</td><td>${pagoMedico} Bs</td></tr>`;
+                });
+            } else if (tipo === "canceladas") {
+                thead.innerHTML = "<tr><th>Nombre</th><th>Cédula</th><th>Doctor</th><th>Fecha Cita</th><th>Fecha Cancelación</th></tr>";
+                canceladasCompleto.forEach(c => {
+                    tbody.innerHTML += `<tr><td>${c.nombre || ''}</td><td>${c.cedula || ''}</td><td>${c.doctor || ''}</td><td>${c.fecha || ''}</td><td>${c.fechaCancelacion ? c.fechaCancelacion.split('T')[0] : ''}</td></tr>`;
                 });
             } else {
                 thead.innerHTML = "<tr><th>Doctor</th><th>Total Citas</th><th>Comisión (%)</th><th>Total Pago Médico (Bs)</th></tr>";
